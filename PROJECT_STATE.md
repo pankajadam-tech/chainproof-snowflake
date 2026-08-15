@@ -144,8 +144,9 @@ Business design documentation approved August 15, 2026.
 - Numerator: Accepted quantity whose physical receipt date is on or before the original PO requested date, capped at ordered quantity
 - Denominator: Ordered quantity
 - Governing date: Original PO requested delivery date
-- Approver: Data Steward
+- Approver: pankajadam-tech, acting as Supply Chain Data Steward
 - Effective date: August 15, 2026
+- Approved Part 3 documentation commit: 81511c0b8906ebd8e41fa6a2137bfc90d0c986bf
 
 ### Part 3 Documentation
 
