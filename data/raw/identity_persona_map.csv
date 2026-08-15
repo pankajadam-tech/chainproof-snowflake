@@ -1,0 +1,7 @@
+user_id,default_persona,default_plant_id,metric_approval_authority,display_name
+ravi.steward,data_steward,PLT-01,true,Ravi Krishnan
+priya.logistics,logistics,PLT-01,false,Priya Menon
+amit.procurement,procurement,PLT-01,false,Amit Patel
+neha.planning,planning,PLT-01,false,Neha Sharma
+vijay.ops,operations_leader,PLT-01,false,Vijay Reddy
+admin.system,data_steward,PLT-01,true,System Administrator

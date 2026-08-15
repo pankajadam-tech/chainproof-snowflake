@@ -1,0 +1,6 @@
+supplier_id,supplier_name,location,status
+S-101,BatteryWorks,Shenzhen,active
+S-102,ChipTech Industries,Taipei,active
+S-103,ScreenCo Ltd,Seoul,active
+S-104,MemoryPlus Corp,Tokyo,active
+S-105,CaseMakers Inc,Dongguan,inactive

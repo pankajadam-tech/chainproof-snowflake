@@ -1,0 +1,6 @@
+part_id,part_name,category,base_unit_of_measure
+P-2001,Laptop Battery,Battery,EACH
+P-2002,CPU Module,Processor,EACH
+P-2003,LCD Panel 15in,Display,EACH
+P-2004,RAM 16GB DDR5,Memory,EACH
+P-2005,Aluminum Chassis,Enclosure,EACH

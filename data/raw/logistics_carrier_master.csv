@@ -1,0 +1,4 @@
+carrier_id,carrier_name,mode,status
+CR-01,FastFreight Logistics,road,active
+CR-02,OceanLink Shipping,sea,active
+CR-03,SkyExpress Air Cargo,air,active

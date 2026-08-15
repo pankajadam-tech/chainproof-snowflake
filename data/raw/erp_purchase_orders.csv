@@ -1,0 +1,9 @@
+po_number,supplier_id,destination_plant_id,po_date,status
+PO-5001,S-101,PLT-01,2026-07-25,closed
+PO-5002,S-102,PLT-01,2026-07-20,closed
+PO-5003,S-103,PLT-01,2026-07-22,closed
+PO-5004,S-104,PLT-01,2026-07-28,open
+PO-5005,S-101,PLT-02,2026-07-30,open
+PO-5006,S-102,PLT-02,2026-08-01,open
+PO-5007,S-103,PLT-01,2026-08-02,open
+PO-5008,S-105,PLT-01,2026-06-15,cancelled

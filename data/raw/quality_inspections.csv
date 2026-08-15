@@ -1,0 +1,16 @@
+inspection_id,receipt_id,accepted_quantity,rejected_quantity,damaged_quantity,inspection_date,disposition
+INS-001,REC-001,85,3,2,2026-08-08,completed
+INS-002,REC-002,10,0,0,2026-08-11,completed
+INS-003,REC-003,48,1,1,2026-08-05,completed
+INS-004,REC-004,195,3,2,2026-08-06,completed
+INS-005,REC-005,72,2,1,2026-08-07,completed
+INS-006,REC-006,97,2,1,2026-08-08,completed
+INS-007,REC-007,50,0,0,2026-08-09,completed
+INS-008,REC-008,190,5,5,2026-07-10,completed
+INS-009,REC-009,58,1,1,2026-08-12,completed
+INS-010,REC-010,39,1,0,2026-08-13,completed
+INS-011,REC-011,48,1,1,2026-08-18,completed
+INS-012,REC-012,98,1,1,2026-08-16,completed
+INS-013,REC-013,29,1,0,2026-08-20,completed
+INS-014,REC-014,147,2,1,2026-08-14,completed
+INS-015,REC-015,78,1,1,2026-08-13,completed
