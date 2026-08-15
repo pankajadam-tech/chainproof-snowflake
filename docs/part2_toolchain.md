@@ -12,7 +12,7 @@ macOS
 
 ## Cortex Code CLI (`cortex`)
 
-**Purpose:** AI-assisted development agent for Snowflake — executes SQL, searches the object catalog, discovers semantic views and agents, manages secrets, and orchestrates multi-step workflows.
+**Purpose:** AI-assisted Snowflake development agent that can inspect files, generate code, execute approved SQL and shell operations, and orchestrate development workflows.
 
 **Version:** 1.1.65
 
@@ -25,7 +25,8 @@ macOS
 | Development role | `GRIZZLY03_LEARNER_RL` |
 | Warehouse | `GRIZZLY03_WH` |
 | Database | `CHAINPROOF` |
-| Schema | _(not set)_ |
+| Connection default schema | Not configured |
+| Required project session schema | `CHAINPROOF.RAW` |
 
 ## Safety Rules
 
@@ -42,8 +43,10 @@ macOS
 ```bash
 snow --version
 cortex --version
-cortex connections list
+snow connection list --all
 ```
+
+Inside an interactive CoCo session, use `/connections` to inspect or select the active connection.
 
 ```sql
 SELECT CURRENT_USER() AS USER_NAME,

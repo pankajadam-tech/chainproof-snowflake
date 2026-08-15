@@ -31,4 +31,5 @@ Consumer-electronics manufacturing supply chain.
 The initial scenario follows laptop components from suppliers through purchase orders and shipments to a manufacturing plant.
 
 ## Current Status
-Part 2: Mac CLI, GitHub, and CoCo development environment.
+
+Part 2 complete. Mac CLI, GitHub, Snowflake CLI, and CoCo development environme

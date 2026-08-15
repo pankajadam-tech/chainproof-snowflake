@@ -1,4 +1,4 @@
-ChainProof Project State
+# ChainProof Project State
 
 ## Product
 
@@ -49,12 +49,12 @@ A logistics user explicitly asking for the logistics metric receives that logist
 
 ## Snowflake Architecture
 
-- CHAINPROOF_RAW
-- CHAINPROOF_CORE
-- CHAINPROOF_GOVERNANCE
-- CHAINPROOF_SEMANTIC
-- CHAINPROOF_APP
-- CHAINPROOF_AUDIT
+- `CHAINPROOF.RAW`
+- `CHAINPROOF.CORE`
+- `CHAINPROOF.GOVERNANCE`
+- `CHAINPROOF.SEMANTIC`
+- `CHAINPROOF.APP`
+- `CHAINPROOF.AUDIT`
 
 ## Technology Direction
 
@@ -79,9 +79,9 @@ A logistics user explicitly asking for the logistics metric receives that logist
 - Learner role granted project access
 - Cortex Analyst, Search, Agents, and Evaluate visible
 
-## Current Part
+## Current Status
 
-Part 2 – Mac CLI, GitHub, and CoCo toolchain.
+Part 2 complete. Repository corrections applied and ready for Part 3 review.
 
 ## Remaining Parts
 3. Business and ontology design  
