@@ -128,7 +128,8 @@ August 8 to Pune Plant.
 **Business key:** `po_number` + `po_line_number`
 
 **Important attributes:** part reference, ordered quantity, original requested
-delivery date, destination plant, unit price, line status.
+delivery date, revised requested delivery date, destination plant, unit price,
+line status.
 
 **Source ownership:** ERP / Procurement System.
 
@@ -183,7 +184,7 @@ PO-5001 line 1.
 **Business key:** `shipment_id` + `shipment_line_number`
 
 **Important attributes:** PO line reference, part reference, shipped quantity,
-original carrier commitment date.
+original carrier commitment date, revised carrier commitment date.
 
 **Source ownership:** Logistics / Receiving System.
 
@@ -272,8 +273,9 @@ August 12 to produce 100 laptops.
 
 **Business key:** `part_id` + `plant_id` + `need_date`
 
-**Important attributes:** required quantity, associated production order/plan
-reference, need date.
+**Important attributes:** required quantity, usable quantity available by need
+date, production need date, planning record timestamp, requirement status,
+associated production order/plan reference.
 
 **Source ownership:** Planning System.
 
@@ -353,13 +355,16 @@ exclusion), definition text, source entity references.
 
 ### Metric Conflict
 
-**Meaning:** A detected disagreement where two or more metric versions claim to
-answer the same business question but produce different numbers.
+**Meaning:** A detected governance issue where two or more metric definitions use
+the same or confusingly similar label but differ in business question, grain,
+numerator, denominator, governing date, exclusions, or calculation behavior.
 
 **What one row represents:** One conflict instance.
 
-**Laptop-component example:** "Fill Rate" is claimed by Planning (95%),
-Procurement (85%), and Logistics (90%) with different formulas.
+**Laptop-component example:** "Fill Rate" is used by Planning (95%, material
+availability by need date), Procurement (85%, accepted quantity by PO date), and
+Logistics (90%, physical arrival by carrier commitment). They ask different
+business questions but share an ambiguous label.
 
 **Business key:** `conflict_id`
 
@@ -418,7 +423,7 @@ persona and plant context.
 
 **What one row represents:** One user's application defaults.
 
-**Laptop-component example:** User "priya.kumar" defaults to the Procurement
+**Laptop-component example:** User "priya.logistics" defaults to the Logistics
 persona with Pune Plant context.
 
 **Business key:** `user_id`
@@ -426,7 +431,7 @@ persona with Pune Plant context.
 **Important attributes:** default persona, default plant, metric approval
 authority flag.
 
-**Where it appears in Snowflake:** `CHAINPROOF.APP`
+**Where it appears in Snowflake:** `CHAINPROOF.GOVERNANCE`
 
 **Critical boundary:** This controls application presentation defaults only.
 Snowflake roles control data access authorization. The User Persona Map must
@@ -474,3 +479,5 @@ erDiagram
 3. One conflict has two or more conflict members.
 4. User Persona Map controls application defaults only; Snowflake roles
    control authorization.
+5. Original dates drive version 1.0 metric performance. Revised dates are
+   retained as explanatory context but do not change the numerator.

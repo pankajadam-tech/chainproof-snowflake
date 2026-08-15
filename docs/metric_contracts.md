@@ -7,8 +7,8 @@ Each contract specifies exactly how a metric is calculated, what dates and
 quantities are used, and how edge cases are handled.
 
 Three department metrics are classified as **Department — Approved**. The
-enterprise metric is classified as **Candidate — Conflicting** and requires
-explicit human approval before it can be promoted.
+enterprise metric is classified as **Enterprise — Approved** (version 1.0,
+approved August 15, 2026).
 
 ---
 
@@ -61,6 +61,49 @@ explicitly overrides them.
     performance includes only records whose governing dates are due by the
     analysis as-of time. Planning may evaluate future production need dates
     using the latest available Planning record.
+
+---
+
+## Record Exclusions
+
+Records matching any of the following conditions are excluded from the governed
+calculation AND reported as data-quality exceptions. They are removed from both
+the numerator and denominator.
+
+### Planning Exclusions
+
+- Canceled or inactive production requirements.
+- Zero or negative required quantity.
+- Missing production need date.
+- Unresolved unit of measure conversion.
+- Invalid quantities (non-numeric, null, or negative).
+
+### Procurement and Enterprise Exclusions
+
+- Canceled PO lines.
+- Zero or negative ordered quantity.
+- Missing original PO requested delivery date.
+- Unresolved unit of measure conversion.
+- Invalid quantities (non-numeric, null, or negative).
+- Receipt quantity without a final accepted inspection result (pending inspection
+  is excluded from the numerator but the PO line remains in the denominator).
+
+### Logistics Exclusions
+
+- Canceled or voided shipment lines.
+- Zero or negative shipped quantity.
+- Missing original carrier commitment date.
+- Unresolved unit of measure conversion.
+- Invalid quantities (non-numeric, null, or negative).
+
+### Treatment
+
+All excluded records are:
+1. **Removed** from the governed metric calculation (excluded from both numerator
+   and denominator, except pending inspection which is excluded from the numerator
+   only).
+2. **Reported** as data-quality exceptions in the AUDIT schema.
+3. **Never** silently converted to zero.
 
 ---
 
@@ -182,9 +225,8 @@ explicitly overrides them.
 | **Name** | Enterprise Supplier Fill Rate |
 | **Business question** | Of the quantity the company ordered from suppliers, how much acceptable, usable quantity was physically received by the original PO requested date? |
 | **Owner** | Supply Chain Data Steward / Operations Analytics Lead |
-| **Classification** | **Candidate — Conflicting** (pending explicit human approval) |
-| **Classification after approval** | Enterprise — Approved |
-| **Proposed version** | 1.0 |
+| **Classification** | **Enterprise — Approved** |
+| **Version** | 1.0 |
 | **Grain** | Purchase Order Line |
 | **Numerator** | Accepted quantity whose physical receipt date is on or before the original PO requested date, capped at ordered quantity |
 | **Denominator** | Ordered quantity |
@@ -213,17 +255,18 @@ explicitly overrides them.
 
 | Field | Value |
 |-------|-------|
-| Approver | TBD |
-| Decision | Pending |
-| Effective date | TBD |
-| Comments | Awaiting explicit human approval after Part 3 documentation review |
+| Approver | Data Steward |
+| Decision | Approved |
+| Decision date | August 15, 2026 |
+| Effective date | August 15, 2026 |
+| Comments | Approved after Part 3 documentation review. Version 1.0 formula is internally consistent with worked examples. |
 
 ---
 
 ## Why Enterprise and Procurement Share a Formula
 
 The Enterprise Supplier Fill Rate and the Procurement Supplier Accepted Fill Rate
-currently use the same numerator, denominator, governing date, and grain. This
+use the same numerator, denominator, governing date, and grain. This
 is intentional in version 1.0 — the enterprise definition adopts Procurement's
 formula as the organization-wide standard.
 
@@ -232,7 +275,7 @@ However, they differ in **governance scope**:
 | Aspect | Procurement Metric | Enterprise Metric |
 |--------|-------------------|-------------------|
 | **Owner** | Procurement department | Data Steward (cross-functional) |
-| **Classification** | Department — Approved | Candidate — Conflicting (until approved) |
+| **Classification** | Department — Approved | Enterprise — Approved |
 | **Scope of authority** | Procurement team's performance view | Organization-wide standard answer |
 | **Can be changed by** | Procurement leadership | Only the Data Steward with formal approval |
 | **Conflict resolution** | Not responsible for resolving cross-department conflicts | Resolves the "fill rate" naming conflict |

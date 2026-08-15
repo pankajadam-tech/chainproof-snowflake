@@ -17,7 +17,7 @@ exclusions, or the numerical answer of a governed metric.
 |-------|-----------------|----------------|
 | **Identity** | Who is signed in (authentication) | Snowflake user account |
 | **Security Role** | What data and operations the user may access (authorization) | Snowflake role grants |
-| **Persona** | Default view, explanation emphasis, related metrics, follow-up suggestions | `CHAINPROOF.APP` User Persona Map |
+| **Persona** | Default view, explanation emphasis, related metrics, follow-up suggestions | `CHAINPROOF.GOVERNANCE` User Persona Map |
 | **Requested Metric** | Which governed formula produces the answer | `CHAINPROOF.GOVERNANCE` Metric Definition |
 
 **Laptop-component example:** A Procurement Analyst (identity) with the

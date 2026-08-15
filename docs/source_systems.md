@@ -56,7 +56,7 @@ requested date (governing date for Procurement and Enterprise metrics).
 |-----------|--------|
 | Ownership | PO headers, PO lines, supplier, part, destination, ordered quantity, price, status, requested dates |
 | Grain | Purchase Order Line |
-| Key dates | Original requested delivery date, PO creation date |
+| Key dates | Original requested delivery date, revised requested delivery date, PO creation date |
 | Key identifiers | PO number, PO line number, Supplier ID, Part ID, Plant ID |
 
 **Conflict with other systems:** Procurement measures fill rate by the PO
@@ -84,7 +84,7 @@ units on August 8.
 |-----------|--------|
 | Ownership | Shipments, shipment lines, carrier, shipped quantity, original commitment date, physical receipt quantity, receipt date |
 | Grain | Shipment Line |
-| Key dates | Original carrier commitment date, actual arrival (receipt) date |
+| Key dates | Original carrier commitment date, revised carrier commitment date, actual arrival (receipt) date |
 | Key identifiers | Shipment ID, Shipment Line ID, Carrier ID, PO Line reference |
 
 **Conflict with other systems:** Logistics counts physical arrival regardless of
@@ -174,7 +174,7 @@ numbering scheme than the ERP. The master data provides the canonical mapping.
 **What it is:** The application-level configuration that maps authenticated users
 to their default persona, default plant context, and approval authority.
 
-**Laptop-component example:** User "priya.kumar" is mapped to the Procurement
+**Laptop-component example:** User "priya.logistics" is mapped to the Logistics
 persona with a default plant of Pune Plant and no metric-approval authority.
 
 **Why it matters to ChainProof:** The persona mapping drives presentation
@@ -186,7 +186,7 @@ Snowflake role-based authorization.
 | Ownership | Default persona, default plant, approval indicator |
 | Grain | User |
 | Key identifiers | User identifier (matches Snowflake user or application login) |
-| Where it lives | `CHAINPROOF.APP` schema |
+| Where it lives | `CHAINPROOF.GOVERNANCE` schema |
 
 **Conflict with other systems:** This system has no conflict with transactional
 sources. Its critical boundary is with Snowflake's native role system: the

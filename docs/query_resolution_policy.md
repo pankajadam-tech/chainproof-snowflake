@@ -152,7 +152,9 @@ Supplier Fill Rate has NOT yet been approved (still Candidate — Conflicting).
 **Behavior:**
 1. Return an authorization message.
 2. Do NOT reveal what restricted information exists.
-3. Do NOT substitute a different, accessible metric without explicit user consent.
+3. Do NOT substitute a different metric. The user may separately request another
+   metric, but the application must not reinterpret an unauthorized request into
+   a different metric automatically.
 4. Do NOT suggest ways to circumvent access controls.
 
 **Example response:**
