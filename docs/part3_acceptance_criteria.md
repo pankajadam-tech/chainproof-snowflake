@@ -87,7 +87,7 @@ begin.
 | Metric | Enterprise Supplier Fill Rate |
 | Version | 1.0 |
 | Classification | Enterprise — Approved |
-| Approver | Data Steward |
+| Approver | pankajadam-tech, acting as Supply Chain Data Steward |
 | Decision | Approved |
 | Decision date | August 15, 2026 |
 | Effective date | August 15, 2026 |

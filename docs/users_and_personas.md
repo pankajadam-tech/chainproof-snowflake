@@ -112,5 +112,6 @@ Procurement user asking the same question. ChainProof prevents this.
 - If a user requests data their Snowflake role cannot access, the application
   returns an authorization message.
 - The application does not reveal what restricted information exists.
-- The application does not substitute a different, accessible metric without
-  explicit user consent.
+- The application does not substitute a different metric.
+- The user may separately request another metric, but the application must not
+  reinterpret an unauthorized request into a different metric automatically.

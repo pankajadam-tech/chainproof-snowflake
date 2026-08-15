@@ -255,7 +255,7 @@ All excluded records are:
 
 | Field | Value |
 |-------|-------|
-| Approver | Data Steward |
+| Approver | pankajadam-tech, acting as Supply Chain Data Steward |
 | Decision | Approved |
 | Decision date | August 15, 2026 |
 | Effective date | August 15, 2026 |
