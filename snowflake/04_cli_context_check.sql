@@ -1,0 +1,8 @@
+SELECT
+CURRENT_USER() AS current_user,
+CURRENT_ROLE() AS active_role,
+CURRENT_WAREHOUSE() AS active_warehouse,
+CURRENT_DATABASE() AS active_database,
+CURRENT_SCHEMA() AS active_schema;
+
+SHOW SCHEMAS IN DATABASE CHAINPROOF;

@@ -1,0 +1,29 @@
+# Credentials and environment files
+.env
+.env.*
+*.pem
+*.p8
+*.key
+*.token
+connections.toml
+config.toml
+.streamlit/secrets.toml
+.snowflake/
+
+# Python
+.venv/
+venv/
+__pycache__
+*.pyc
+.pytest_cache/
+
+# macOS
+.DS_Store
+
+# Editors
+.vscode/
+.idea/
+
+# Logs and temporary files
+*.log
+*.tmp
