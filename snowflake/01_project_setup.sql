@@ -1,39 +1,30 @@
 -- Run only with the hackathon database-creation role.
--- This file records the original environment setup.
+-- This file records the original ChainProof environment setup.
 -- Do not use this role for normal application development.
-
 
 USE ROLE GRIZZLY03_CREATE_DB_RL;
 USE WAREHOUSE GRIZZLY03_WH;
 
-
 CREATE DATABASE IF NOT EXISTS CHAINPROOF
-    COMMENT = 'Snowflake-native supply-chain metric reconciliation and governed
-
+    COMMENT = 'ChainProof governed supply-chain analytics project';
 
 CREATE SCHEMA IF NOT EXISTS CHAINPROOF.RAW
-    COMMENT = 'Source-system data and source-specific metric outputs exactly as
-
+    COMMENT = 'Source data exactly as received';
 
 CREATE SCHEMA IF NOT EXISTS CHAINPROOF.CORE
-    COMMENT = 'Cleaned canonical supply-chain entities, transactions, dates, qu
-
+    COMMENT = 'Cleaned canonical supply-chain entities';
 
 CREATE SCHEMA IF NOT EXISTS CHAINPROOF.GOVERNANCE
-    COMMENT = 'Metric definitions, classifications, conflicts, owners, approval
-
+    COMMENT = 'Metric definitions, conflicts, owners, and approvals';
 
 CREATE SCHEMA IF NOT EXISTS CHAINPROOF.SEMANTIC
-    COMMENT = 'Approved business views, semantic views, relationships, and cano
-
+    COMMENT = 'Approved semantic views and canonical metrics';
 
 CREATE SCHEMA IF NOT EXISTS CHAINPROOF.APP
-    COMMENT = 'Streamlit application, Cortex Search, Cortex Agents, and control
-
+    COMMENT = 'Streamlit, Cortex Search, agents, and actions';
 
 CREATE SCHEMA IF NOT EXISTS CHAINPROOF.AUDIT
-    COMMENT = 'Evaluation results, reconciliation history, user feedback, trace
-
+    COMMENT = 'Evaluations, feedback, traces, and history';
 
 USE DATABASE CHAINPROOF;
 USE SCHEMA CHAINPROOF.RAW;

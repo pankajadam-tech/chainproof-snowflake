@@ -32,4 +32,5 @@ The initial scenario follows laptop components from suppliers through purchase o
 
 ## Current Status
 
-Part 2 complete. Mac CLI, GitHub, Snowflake CLI, and CoCo development environme
+Part 2 complete. Mac CLI, GitHub, Snowflake CLI, and CoCo are verified.
+Ready for Part 3 business and ontology design.
