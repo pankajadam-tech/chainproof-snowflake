@@ -81,10 +81,9 @@ A logistics user explicitly asking for the logistics metric receives that logist
 
 ## Current Status
 
-Part 2 complete. Repository corrections applied and ready for Part 3 review.
+Part 3 complete. Business design documentation approved. Ready for Part 4.
 
 ## Remaining Parts
-3. Business and ontology design  
 4. Source-system data  
 5. Canonical entity layer  
 6. Metric reconciliation engine  
@@ -132,6 +131,32 @@ The Mac development toolchain is connected and verified.
 - CoCo inspected the local Git repository.
 - docs/part2_toolchain.md was created through an approved plan.
 
+## Part 3 Completion
+
+Business design documentation approved August 15, 2026.
+
+### Approved Enterprise Metric
+
+- Name: Enterprise Supplier Fill Rate
+- Version: 1.0
+- Classification: Enterprise — Approved
+- Grain: Purchase Order Line
+- Numerator: Accepted quantity whose physical receipt date is on or before the original PO requested date, capped at ordered quantity
+- Denominator: Ordered quantity
+- Governing date: Original PO requested delivery date
+- Approver: Data Steward
+- Effective date: August 15, 2026
+
+### Part 3 Documentation
+
+- docs/business_scenario.md
+- docs/users_and_personas.md
+- docs/source_systems.md
+- docs/ontology.md
+- docs/metric_contracts.md
+- docs/query_resolution_policy.md
+- docs/part3_acceptance_criteria.md
+
 ## Next Part
 
-Part 3 – Define the precise business scenario, source systems, business users, ontology, entity relationships, and competing metric definitions before generating any synthetic data.
+Part 4 – Generate synthetic source-system data consistent with the approved metric contracts.
