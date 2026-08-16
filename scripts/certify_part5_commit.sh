@@ -1,0 +1,185 @@
+#!/usr/bin/env bash
+# One-command technical acceptance gate for ChainProof Part 5.
+# This script never commits or pushes. It writes truthful runtime evidence only
+# after the complete two-pass Snowflake verification succeeds.
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+cd "${REPO_ROOT}"
+
+LOG_DIR="${CHAINPROOF_LOG_DIR:-${TMPDIR:-/tmp}/chainproof}"
+mkdir -p "${LOG_DIR}"
+
+fail() {
+  echo "FAIL: $*" >&2
+  exit 1
+}
+
+is_allowed_part5_file() {
+  case "$1" in
+    docs/part5_canonical_entity_layer.md|\
+    docs/part5_acceptance_criteria.md|\
+    docs/part5_runtime_evidence.md|\
+    snowflake/19_part5_reset_core.sql|\
+    snowflake/20_part5_core_tables.sql|\
+    snowflake/21_part5_core_load.sql|\
+    snowflake/22_part5_core_views.sql|\
+    snowflake/23_part5_core_validation.sql|\
+    scripts/validate_part5_static.py|\
+    scripts/build_part5_core.sh|\
+    scripts/verify_part5_end_to_end.sh|\
+    scripts/certify_part5_commit.sh|\
+    tests/part5_core_tests.sql)
+      return 0
+      ;;
+    *)
+      return 1
+      ;;
+  esac
+}
+
+changed_files() {
+  {
+    git diff --name-only
+    git diff --cached --name-only
+    git ls-files --others --exclude-standard
+  } | sed '/^[[:space:]]*$/d' | sort -u
+}
+
+command -v git >/dev/null 2>&1 || fail "git is required"
+command -v python3 >/dev/null 2>&1 || fail "python3 is required"
+command -v snow >/dev/null 2>&1 || fail "Snowflake CLI command 'snow' is required"
+git rev-parse --is-inside-work-tree >/dev/null 2>&1 || fail "run this command from the ChainProof Git repository"
+# Test only working-tree content. A pre-existing staged snapshot could differ
+# from the files being certified and later be committed accidentally.
+git diff --cached --quiet || fail "staged changes exist; run: git restore --staged .  (this keeps working-tree edits), then rerun certification"
+
+# Remove local Python bytecode from earlier validation attempts. Bytecode is
+# execution residue, not a project artifact.
+rm -rf scripts/__pycache__
+
+# The Part 5 certification must start from a clean Part 4 checkpoint: only
+# designated Part 5 files may be modified or untracked.
+while IFS= read -r file; do
+  is_allowed_part5_file "${file}" || fail "unexpected changed file outside Part 5 scope: ${file}"
+  case "${file}" in
+    *.env|*.pem|*.p8|*config.toml|*connections.toml|*secret*|*token*)
+      fail "sensitive-looking file must not be part of the Part 5 change: ${file}"
+      ;;
+  esac
+done <<EOF_CHANGED
+$(changed_files)
+EOF_CHANGED
+
+git diff --check
+git diff --cached --check
+python3 -m py_compile scripts/validate_part4_csvs.py scripts/validate_part5_static.py
+rm -rf scripts/__pycache__
+bash -n scripts/build_part5_core.sh
+bash -n scripts/verify_part5_end_to_end.sh
+bash -n scripts/certify_part5_commit.sh
+
+export CHAINPROOF_LOG_DIR="${LOG_DIR}"
+./scripts/verify_part5_end_to_end.sh
+
+LATEST_LOG="$(ls -t "${LOG_DIR}"/part5_end_to_end_*.log 2>/dev/null | head -n 1 || true)"
+[[ -n "${LATEST_LOG}" ]] || fail "Part 5 evidence log was not created"
+grep -Fq "=== PART 5 END-TO-END PASS ===" "${LATEST_LOG}" || fail "Part 5 PASS banner is missing from the evidence log"
+grep -Fq "Final expectation: 12 CORE tables, 3 CORE views, 117 total table rows." "${LATEST_LOG}" || fail "Part 5 final-count declaration is missing from the evidence log"
+
+LOG_SHA256="$(shasum -a 256 "${LATEST_LOG}" | awk '{print $1}')"
+GIT_HEAD="$(git rev-parse HEAD)"
+EXECUTED_AT="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+OPERATOR="$(id -un)"
+SNOW_VERSION="$(snow --version 2>/dev/null | head -n 1 | tr -d '\r')"
+
+cat > docs/part5_runtime_evidence.md <<EOF_EVIDENCE
+# Part 5 Runtime Evidence
+
+- **Status:** PASS
+- **Executed at (UTC):** ${EXECUTED_AT}
+- **Repository base HEAD:** \`${GIT_HEAD}\`
+- **Operator:** \`${OPERATOR}\`
+- **Command:** \`./scripts/certify_part5_commit.sh\`
+- **Snowflake CLI:** \`${SNOW_VERSION}\`
+- **Role:** \`GRIZZLY03_LEARNER_RL\`
+- **Warehouse:** \`GRIZZLY03_WH\`
+- **Database:** \`CHAINPROOF\`
+- **Schema:** \`CHAINPROOF.CORE\`
+- **Evidence log:** \`$(basename "${LATEST_LOG}")\`
+- **Evidence log SHA-256:** \`${LOG_SHA256}\`
+
+## Certified results
+
+The fail-fast gate completed two full CORE builds. It verified:
+
+- 12 CORE tables and 3 CORE evidence views;
+- 117 total CORE table rows;
+- 105 operational RAW rows represented in CORE;
+- 12 exact deterministic data-quality issues;
+- zero duplicate canonical keys and zero orphan relationships;
+- valid inspection arithmetic and complete source lineage;
+- PO-5001 evidence of 100 ordered, 100 physically received, 95 accepted,
+  85 accepted by the original PO date, and 90 received by original carrier
+  commitments;
+- aggregate evidence of Procurement/Enterprise \`288 / 555\`, Logistics
+  \`415 / 565\`, and Planning \`513 / 555\`;
+- a second build with stable counts and no duplicate accumulation.
+
+## Attribution
+
+This document was generated by the repository certification script from an
+actual Snowflake execution. It does not claim authorship or execution by a
+person or model that did not perform the recorded work.
+EOF_EVIDENCE
+
+python3 - <<'PY'
+from pathlib import Path
+path = Path("docs/part5_acceptance_criteria.md")
+text = path.read_text(encoding="utf-8")
+text = text.replace("- [ ] **[RUNTIME]**", "- [x] **[RUNTIME]**")
+path.write_text(text, encoding="utf-8")
+PY
+
+# Final repository checks after evidence generation.
+rm -rf scripts/__pycache__
+git diff --check
+git diff --cached --check
+while IFS= read -r file; do
+  is_allowed_part5_file "${file}" || fail "unexpected changed file after certification: ${file}"
+done <<EOF_FINAL
+$(changed_files)
+EOF_FINAL
+
+cat <<'EOF_PASS'
+============================================================
+=== PART 5 COMMIT-READY PASS ===
+The complete two-pass Snowflake gate passed.
+Runtime acceptance boxes and truthful evidence were generated.
+Only approved Part 5 files are changed.
+No commit or push was performed.
+============================================================
+
+Review the staged scope, then use:
+
+git add \
+  docs/part5_canonical_entity_layer.md \
+  docs/part5_acceptance_criteria.md \
+  docs/part5_runtime_evidence.md \
+  snowflake/19_part5_reset_core.sql \
+  snowflake/20_part5_core_tables.sql \
+  snowflake/21_part5_core_load.sql \
+  snowflake/22_part5_core_views.sql \
+  snowflake/23_part5_core_validation.sql \
+  scripts/validate_part5_static.py \
+  scripts/build_part5_core.sh \
+  scripts/verify_part5_end_to_end.sh \
+  scripts/certify_part5_commit.sh \
+  tests/part5_core_tests.sql
+
+git diff --cached --check
+git diff --cached --stat
+git commit -m "feat: add Part 5 canonical CORE layer"
+git push origin HEAD
+EOF_PASS
