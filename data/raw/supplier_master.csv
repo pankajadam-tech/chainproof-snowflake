@@ -1,5 +1,5 @@
-supplier_id,supplier_name,erp_supplier_code,logistics_supplier_code,location,status
-S-101,BatteryWorks,ERP-BW01,LOG-BW,Shenzhen,active
-S-102,PowerCell Ltd,ERP-PC01,LOG-PC,Taipei,active
-S-103,VoltMax Corp,ERP-VM01,LOG-VM,Seoul,active
-S-104,EnergyPro Inc,ERP-EP01,LOG-EP,Tokyo,active
+supplier_id,supplier_name,country_code,city_name,supplier_status,erp_supplier_code,logistics_supplier_code
+S-101,BatteryWorks,CN,Shenzhen,ACTIVE,BW-ERP-01,BATWRK-LOG
+S-102,PowerCell Industries,KR,Busan,ACTIVE,PC-ERP-02,PWRCL-LOG
+S-103,VoltEdge Components,VN,Ho Chi Minh City,ACTIVE,VE-ERP-03,VOLTEDGE-LOG
+S-199,Legacy Battery Co,IN,Mumbai,INACTIVE,LBC-ERP-99,LEGACY-LOG

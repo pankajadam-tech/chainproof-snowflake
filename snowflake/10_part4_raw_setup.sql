@@ -1,12 +1,14 @@
 -- Part 4: RAW schema setup — file format and stage
--- Uses IF NOT EXISTS to preserve stage files across re-runs.
+-- File format is recreated on every run (CREATE OR REPLACE) so a prior
+-- partial run cannot leave it misconfigured.
+-- Stage uses IF NOT EXISTS to preserve uploaded-file state across re-runs.
 
 USE ROLE GRIZZLY03_LEARNER_RL;
 USE WAREHOUSE GRIZZLY03_WH;
 USE DATABASE CHAINPROOF;
 USE SCHEMA CHAINPROOF.RAW;
 
-CREATE FILE FORMAT IF NOT EXISTS CHAINPROOF.RAW.PART4_CSV_FORMAT
+CREATE OR REPLACE FILE FORMAT CHAINPROOF.RAW.PART4_CSV_FORMAT
     TYPE = CSV
     FIELD_DELIMITER = ','
     SKIP_HEADER = 1
@@ -19,4 +21,4 @@ CREATE FILE FORMAT IF NOT EXISTS CHAINPROOF.RAW.PART4_CSV_FORMAT
 
 CREATE STAGE IF NOT EXISTS CHAINPROOF.RAW.PART4_SOURCE_STAGE
     FILE_FORMAT = CHAINPROOF.RAW.PART4_CSV_FORMAT
-    COMMENT = 'Internal stage for Part 4 source CSV uploads';
+    COMMENT = 'Internal stage for deterministic Part 4 synthetic source files';
