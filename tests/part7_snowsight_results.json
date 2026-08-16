@@ -1,0 +1,95 @@
+{
+  "semantic_view": "CHAINPROOF.SEMANTIC.CHAINPROOF_SUPPLY_CHAIN_SV",
+  "role": "GRIZZLY03_LEARNER_RL",
+  "warehouse": "GRIZZLY03_WH",
+  "official_evaluation": {
+    "run_name": "CHAINPROOF_PART7_20260816T154244Z",
+    "status": "BLOCKED_BY_ACCOUNT_PRIVILEGE",
+    "reason": "The learner role cannot create or execute the Snowflake tasks required by the official Cortex Analyst evaluation.",
+    "accuracy_claimed": false
+  },
+  "questions": [
+    {
+      "id": "enterprise_exact",
+      "question": "What is Enterprise Supplier Fill Rate for PO-5001?",
+      "expected_metric": "Enterprise Supplier Fill Rate",
+      "expected_rate": 0.85,
+      "actual_rate": 0.85,
+      "status": "PASS",
+      "generated_sql_read_only": true,
+      "uses_semantic_view": true,
+      "references_forbidden_physical_schema": false,
+      "notes": "PASS per operator manual Snowsight verification (value + generated SQL)."
+    },
+    {
+      "id": "procurement_exact",
+      "question": "What is Procurement Supplier Accepted Fill Rate for PO-5001?",
+      "expected_metric": "Procurement Supplier Accepted Fill Rate",
+      "expected_rate": 0.85,
+      "actual_rate": 0.85,
+      "status": "PASS",
+      "generated_sql_read_only": true,
+      "uses_semantic_view": true,
+      "references_forbidden_physical_schema": false,
+      "notes": "PASS per operator manual Snowsight verification (value + generated SQL)."
+    },
+    {
+      "id": "logistics_exact",
+      "question": "What is Logistics On-Time Arrival Quantity Rate for PO-5001?",
+      "expected_metric": "Logistics On-Time Arrival Quantity Rate",
+      "expected_rate": 0.90,
+      "actual_rate": 0.9,
+      "status": "PASS",
+      "generated_sql_read_only": true,
+      "uses_semantic_view": true,
+      "references_forbidden_physical_schema": false,
+      "notes": "PASS per operator manual Snowsight verification (value + generated SQL)."
+    },
+    {
+      "id": "planning_exact",
+      "question": "What is Planning Material Availability Rate for production plan PLAN-5001?",
+      "expected_metric": "Planning Material Availability Rate",
+      "expected_rate": 0.95,
+      "actual_rate": 0.95,
+      "status": "PASS",
+      "generated_sql_read_only": true,
+      "uses_semantic_view": true,
+      "references_forbidden_physical_schema": false,
+      "notes": "PASS per operator manual Snowsight verification (value + generated SQL)."
+    },
+    {
+      "id": "ambiguous_fill_rate",
+      "question": "What is fill rate for PO-5001?",
+      "expected_metric": "Enterprise Supplier Fill Rate",
+      "expected_rate": 0.85,
+      "resolved_metric": "Enterprise Supplier Fill Rate",
+      "actual_rate": 0.85,
+      "status": "PASS",
+      "generated_sql_read_only": true,
+      "uses_semantic_view": true,
+      "references_forbidden_physical_schema": false,
+      "notes": "PASS per operator manual Snowsight verification (value + generated SQL; resolved metric confirmed)."
+    },
+    {
+      "id": "cross_functional_comparison",
+      "question": "Compare Planning, Procurement, Logistics, and Enterprise metrics for PO-5001.",
+      "expected_rates": {
+        "Planning": 0.95,
+        "Procurement": 0.85,
+        "Logistics": 0.90,
+        "Enterprise": 0.85
+      },
+      "actual_rates": {
+        "Planning": 0.95,
+        "Procurement": 0.85,
+        "Logistics": 0.9,
+        "Enterprise": 0.85
+      },
+      "status": "PASS",
+      "generated_sql_read_only": true,
+      "uses_semantic_view": true,
+      "references_forbidden_physical_schema": false,
+      "notes": "PASS per operator manual Snowsight verification (comparison values + generated SQL)."
+    }
+  ]
+}

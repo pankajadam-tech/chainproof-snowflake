@@ -1,0 +1,101 @@
+[
+  {
+    "id": "enterprise_po5001",
+    "question": "What is Enterprise Supplier Fill Rate for PO-5001?",
+    "expected_values": [
+      0.85
+    ],
+    "required_sql_tokens": [
+      "ENTERPRISE_SUPPLIER_FILL_RATE"
+    ],
+    "forbidden_sql_tokens": [
+      "CHAINPROOF.RAW.",
+      "CHAINPROOF.CORE.",
+      "CHAINPROOF.GOVERNANCE."
+    ]
+  },
+  {
+    "id": "procurement_po5001",
+    "question": "What is Procurement Supplier Accepted Fill Rate for PO-5001?",
+    "expected_values": [
+      0.85
+    ],
+    "required_sql_tokens": [
+      "PROCUREMENT_SUPPLIER_ACCEPTED_FILL_RATE"
+    ],
+    "forbidden_sql_tokens": [
+      "CHAINPROOF.RAW.",
+      "CHAINPROOF.CORE.",
+      "CHAINPROOF.GOVERNANCE."
+    ]
+  },
+  {
+    "id": "logistics_po5001",
+    "question": "What is Logistics On-Time Arrival Quantity Rate for PO-5001?",
+    "expected_values": [
+      0.9
+    ],
+    "required_sql_tokens": [
+      "LOGISTICS_ON_TIME_ARRIVAL_QUANTITY_RATE"
+    ],
+    "forbidden_sql_tokens": [
+      "CHAINPROOF.RAW.",
+      "CHAINPROOF.CORE.",
+      "CHAINPROOF.GOVERNANCE."
+    ]
+  },
+  {
+    "id": "planning_plan5001",
+    "question": "What is Planning Material Availability Rate for production plan PLAN-5001?",
+    "expected_values": [
+      0.95
+    ],
+    "required_sql_tokens": [
+      "PLANNING_MATERIAL_AVAILABILITY_RATE"
+    ],
+    "forbidden_sql_tokens": [
+      "CHAINPROOF.RAW.",
+      "CHAINPROOF.CORE.",
+      "CHAINPROOF.GOVERNANCE."
+    ]
+  },
+  {
+    "id": "ambiguous_fill_rate_po5001",
+    "question": "What is fill rate for PO-5001?",
+    "expected_values": [
+      0.85
+    ],
+    "required_sql_tokens": [
+      "ENTERPRISE_SUPPLIER_FILL_RATE"
+    ],
+    "forbidden_sql_tokens": [
+      "LOGISTICS_ON_TIME_ARRIVAL_QUANTITY_RATE",
+      "PLANNING_MATERIAL_AVAILABILITY_RATE",
+      "PROCUREMENT_SUPPLIER_ACCEPTED_FILL_RATE",
+      "CHAINPROOF.RAW.",
+      "CHAINPROOF.CORE.",
+      "CHAINPROOF.GOVERNANCE."
+    ]
+  },
+  {
+    "id": "compare_po5001",
+    "question": "Compare Planning, Procurement, Logistics, and Enterprise metrics for PO-5001.",
+    "expected_values": [
+      0.95,
+      0.85,
+      0.9,
+      0.85
+    ],
+    "required_sql_tokens": [
+      "PLANNING_MATERIAL_AVAILABILITY_RATE",
+      "PROCUREMENT_SUPPLIER_ACCEPTED_FILL_RATE",
+      "LOGISTICS_ON_TIME_ARRIVAL_QUANTITY_RATE",
+      "ENTERPRISE_SUPPLIER_FILL_RATE"
+    ],
+    "forbidden_sql_tokens": [
+      "CHAINPROOF.RAW.",
+      "CHAINPROOF.CORE.",
+      "CHAINPROOF.GOVERNANCE."
+    ]
+  }
+]

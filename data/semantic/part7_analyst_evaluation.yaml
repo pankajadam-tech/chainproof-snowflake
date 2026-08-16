@@ -1,0 +1,16 @@
+evaluation:
+  analyst_params:
+    # EXECUTE_AI_EVALUATION requires a fully qualified Semantic View name.
+    analyst_name: "CHAINPROOF.SEMANTIC.CHAINPROOF_SUPPLY_CHAIN_SV"
+    analyst_type: "SEMANTIC VIEW"
+  source_metadata:
+    type: "verified_queries"
+    verified_queries:
+      - "What is Enterprise Supplier Fill Rate for PO-5001?"
+      - "What is Procurement Supplier Accepted Fill Rate for PO-5001?"
+      - "What is Logistics On-Time Arrival Quantity Rate for PO-5001?"
+      - "What is Planning Material Availability Rate for production plan PLAN-5001?"
+      - "What is fill rate for PO-5001?"
+      - "Compare Planning, Procurement, Logistics, and Enterprise metrics for PO-5001."
+metrics:
+  - "sql_correctness"
