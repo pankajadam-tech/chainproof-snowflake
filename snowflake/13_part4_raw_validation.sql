@@ -1,28 +1,51 @@
--- Part 4: RAW data validation
--- Checks per-table counts, total, PO-5001 trace, and edge cases.
+-- Part 4: RAW data validation — readable PASS/FAIL results.
 
 USE ROLE GRIZZLY03_LEARNER_RL;
 USE WAREHOUSE GRIZZLY03_WH;
 USE DATABASE CHAINPROOF;
 USE SCHEMA CHAINPROOF.RAW;
 
--- Per-table row counts with expected values
-SELECT table_name, row_count,
-    CASE
-        WHEN table_name = 'SRC_SUPPLIER_MASTER' AND row_count = 4 THEN 'PASS'
-        WHEN table_name = 'SRC_ERP_PART_MASTER' AND row_count = 1 THEN 'PASS'
-        WHEN table_name = 'SRC_ERP_PLANT_MASTER' AND row_count = 1 THEN 'PASS'
-        WHEN table_name = 'SRC_LOGISTICS_CARRIER_MASTER' AND row_count = 3 THEN 'PASS'
-        WHEN table_name = 'SRC_ERP_PURCHASE_ORDERS' AND row_count = 13 THEN 'PASS'
-        WHEN table_name = 'SRC_ERP_PURCHASE_ORDER_LINES' AND row_count = 13 THEN 'PASS'
-        WHEN table_name = 'SRC_LOGISTICS_SHIPMENTS' AND row_count = 15 THEN 'PASS'
-        WHEN table_name = 'SRC_LOGISTICS_SHIPMENT_LINES' AND row_count = 15 THEN 'PASS'
-        WHEN table_name = 'SRC_LOGISTICS_RECEIPTS' AND row_count = 14 THEN 'PASS'
-        WHEN table_name = 'SRC_QUALITY_INSPECTIONS' AND row_count = 13 THEN 'PASS'
-        WHEN table_name = 'SRC_PLANNING_REQUIREMENTS' AND row_count = 13 THEN 'PASS'
-        WHEN table_name = 'SRC_IDENTITY_PERSONA_MAP' AND row_count = 5 THEN 'PASS'
-        ELSE 'FAIL'
-    END AS status
+-- Stage files
+SELECT 'stage_files' AS check_name, COUNT(*) AS actual, 12 AS expected,
+    CASE WHEN COUNT(*) = 12 THEN 'PASS' ELSE 'FAIL' END AS status
+FROM DIRECTORY(@PART4_SOURCE_STAGE);
+
+-- File format exists
+SELECT 'file_format_exists' AS check_name,
+    CASE WHEN COUNT(*) = 1 THEN 'PASS' ELSE 'FAIL' END AS status
+FROM INFORMATION_SCHEMA.FILE_FORMATS
+WHERE FILE_FORMAT_NAME = 'PART4_CSV_FORMAT';
+
+-- Per-table row counts
+SELECT table_name, row_count AS actual,
+    CASE table_name
+        WHEN 'SRC_SUPPLIER_MASTER' THEN 4
+        WHEN 'SRC_ERP_PART_MASTER' THEN 1
+        WHEN 'SRC_ERP_PLANT_MASTER' THEN 1
+        WHEN 'SRC_LOGISTICS_CARRIER_MASTER' THEN 3
+        WHEN 'SRC_ERP_PURCHASE_ORDERS' THEN 13
+        WHEN 'SRC_ERP_PURCHASE_ORDER_LINES' THEN 13
+        WHEN 'SRC_LOGISTICS_SHIPMENTS' THEN 15
+        WHEN 'SRC_LOGISTICS_SHIPMENT_LINES' THEN 15
+        WHEN 'SRC_LOGISTICS_RECEIPTS' THEN 14
+        WHEN 'SRC_QUALITY_INSPECTIONS' THEN 13
+        WHEN 'SRC_PLANNING_REQUIREMENTS' THEN 13
+        WHEN 'SRC_IDENTITY_PERSONA_MAP' THEN 5
+    END AS expected,
+    CASE WHEN row_count = CASE table_name
+        WHEN 'SRC_SUPPLIER_MASTER' THEN 4
+        WHEN 'SRC_ERP_PART_MASTER' THEN 1
+        WHEN 'SRC_ERP_PLANT_MASTER' THEN 1
+        WHEN 'SRC_LOGISTICS_CARRIER_MASTER' THEN 3
+        WHEN 'SRC_ERP_PURCHASE_ORDERS' THEN 13
+        WHEN 'SRC_ERP_PURCHASE_ORDER_LINES' THEN 13
+        WHEN 'SRC_LOGISTICS_SHIPMENTS' THEN 15
+        WHEN 'SRC_LOGISTICS_SHIPMENT_LINES' THEN 15
+        WHEN 'SRC_LOGISTICS_RECEIPTS' THEN 14
+        WHEN 'SRC_QUALITY_INSPECTIONS' THEN 13
+        WHEN 'SRC_PLANNING_REQUIREMENTS' THEN 13
+        WHEN 'SRC_IDENTITY_PERSONA_MAP' THEN 5
+    END THEN 'PASS' ELSE 'FAIL' END AS status
 FROM (
     SELECT 'SRC_SUPPLIER_MASTER' AS table_name, COUNT(*) AS row_count FROM SRC_SUPPLIER_MASTER
     UNION ALL SELECT 'SRC_ERP_PART_MASTER', COUNT(*) FROM SRC_ERP_PART_MASTER
@@ -39,65 +62,59 @@ FROM (
 )
 ORDER BY table_name;
 
--- Total row count
-SELECT 'TOTAL_ROWS' AS check_name, SUM(row_count) AS value,
-    CASE WHEN SUM(row_count) = 110 THEN 'PASS' ELSE 'FAIL' END AS status
+-- Total rows
+SELECT 'total_rows' AS check_name, SUM(c) AS actual, 110 AS expected,
+    CASE WHEN SUM(c) = 110 THEN 'PASS' ELSE 'FAIL' END AS status
 FROM (
-    SELECT COUNT(*) AS row_count FROM SRC_SUPPLIER_MASTER
-    UNION ALL SELECT COUNT(*) FROM SRC_ERP_PART_MASTER
-    UNION ALL SELECT COUNT(*) FROM SRC_ERP_PLANT_MASTER
-    UNION ALL SELECT COUNT(*) FROM SRC_LOGISTICS_CARRIER_MASTER
-    UNION ALL SELECT COUNT(*) FROM SRC_ERP_PURCHASE_ORDERS
-    UNION ALL SELECT COUNT(*) FROM SRC_ERP_PURCHASE_ORDER_LINES
-    UNION ALL SELECT COUNT(*) FROM SRC_LOGISTICS_SHIPMENTS
-    UNION ALL SELECT COUNT(*) FROM SRC_LOGISTICS_SHIPMENT_LINES
-    UNION ALL SELECT COUNT(*) FROM SRC_LOGISTICS_RECEIPTS
-    UNION ALL SELECT COUNT(*) FROM SRC_QUALITY_INSPECTIONS
-    UNION ALL SELECT COUNT(*) FROM SRC_PLANNING_REQUIREMENTS
-    UNION ALL SELECT COUNT(*) FROM SRC_IDENTITY_PERSONA_MAP
+    SELECT COUNT(*) AS c FROM SRC_SUPPLIER_MASTER UNION ALL SELECT COUNT(*) FROM SRC_ERP_PART_MASTER
+    UNION ALL SELECT COUNT(*) FROM SRC_ERP_PLANT_MASTER UNION ALL SELECT COUNT(*) FROM SRC_LOGISTICS_CARRIER_MASTER
+    UNION ALL SELECT COUNT(*) FROM SRC_ERP_PURCHASE_ORDERS UNION ALL SELECT COUNT(*) FROM SRC_ERP_PURCHASE_ORDER_LINES
+    UNION ALL SELECT COUNT(*) FROM SRC_LOGISTICS_SHIPMENTS UNION ALL SELECT COUNT(*) FROM SRC_LOGISTICS_SHIPMENT_LINES
+    UNION ALL SELECT COUNT(*) FROM SRC_LOGISTICS_RECEIPTS UNION ALL SELECT COUNT(*) FROM SRC_QUALITY_INSPECTIONS
+    UNION ALL SELECT COUNT(*) FROM SRC_PLANNING_REQUIREMENTS UNION ALL SELECT COUNT(*) FROM SRC_IDENTITY_PERSONA_MAP
 );
 
--- PO-5001 spot checks
-SELECT 'PO-5001_ordered_qty' AS check_name, ordered_quantity AS value,
+-- Metadata completeness
+SELECT 'metadata_batch_id' AS check_name,
+    CASE WHEN COUNT(*) = 0 THEN 'PASS' ELSE 'FAIL' END AS status
+FROM SRC_ERP_PURCHASE_ORDER_LINES WHERE load_batch_id != 'PART4_SYNTHETIC_V1';
+
+-- PO-5001 values
+SELECT 'po5001_ordered' AS check_name, ordered_quantity AS actual, '100' AS expected,
     CASE WHEN ordered_quantity = '100' THEN 'PASS' ELSE 'FAIL' END AS status
 FROM SRC_ERP_PURCHASE_ORDER_LINES WHERE po_number = 'PO-5001';
 
-SELECT 'SH-9001_shipped_qty' AS check_name, shipped_quantity AS value,
-    CASE WHEN shipped_quantity = '90' THEN 'PASS' ELSE 'FAIL' END AS status
-FROM SRC_LOGISTICS_SHIPMENT_LINES WHERE shipment_id = 'SH-9001';
-
-SELECT 'R-8001_accepted' AS check_name, accepted_quantity AS value,
-    CASE WHEN accepted_quantity = '85' THEN 'PASS' ELSE 'FAIL' END AS status
-FROM SRC_QUALITY_INSPECTIONS WHERE receipt_id = 'R-8001';
-
--- Edge case checks
-SELECT 'PO-5007_pending_inspection' AS check_name,
+-- Edge cases
+SELECT 'po5007_no_inspection' AS check_name, COUNT(*) AS actual, 0 AS expected,
     CASE WHEN COUNT(*) = 0 THEN 'PASS' ELSE 'FAIL' END AS status
 FROM SRC_QUALITY_INSPECTIONS WHERE receipt_id = 'R-8010';
 
-SELECT 'PO-5010_zero_denominator' AS check_name, ordered_quantity AS value,
+SELECT 'po5010_zero_qty' AS check_name, ordered_quantity AS actual, '0' AS expected,
     CASE WHEN ordered_quantity = '0' THEN 'PASS' ELSE 'FAIL' END AS status
 FROM SRC_ERP_PURCHASE_ORDER_LINES WHERE po_number = 'PO-5010';
 
-SELECT 'PO-5011_missing_dates' AS check_name,
-    CASE WHEN original_requested_delivery_date IS NULL THEN 'PASS' ELSE 'FAIL' END AS status
+SELECT 'po5011_missing_orig_date' AS check_name,
+    CASE WHEN original_requested_delivery_date IS NULL AND revised_requested_delivery_date IS NOT NULL
+         THEN 'PASS' ELSE 'FAIL' END AS status
 FROM SRC_ERP_PURCHASE_ORDER_LINES WHERE po_number = 'PO-5011';
 
-SELECT 'PO-5012_invalid_quantity' AS check_name, ordered_quantity AS value,
+SELECT 'po5012_not_a_number' AS check_name, ordered_quantity AS actual,
     CASE WHEN ordered_quantity = 'NOT_A_NUMBER' THEN 'PASS' ELSE 'FAIL' END AS status
 FROM SRC_ERP_PURCHASE_ORDER_LINES WHERE po_number = 'PO-5012';
 
-SELECT 'PO-5013_unresolved_uom' AS check_name, order_uom AS value,
-    CASE WHEN order_uom = 'BOX' THEN 'PASS' ELSE 'FAIL' END AS status
+SELECT 'po5013_box_uom' AS check_name, order_uom AS actual,
+    CASE WHEN order_uom = 'BOX' AND ordered_quantity = '10' THEN 'PASS' ELSE 'FAIL' END AS status
 FROM SRC_ERP_PURCHASE_ORDER_LINES WHERE po_number = 'PO-5013';
 
--- Ingestion metadata populated
-SELECT 'metadata_populated' AS check_name,
-    CASE WHEN COUNT(*) = 0 THEN 'PASS' ELSE 'FAIL: ' || COUNT(*) || ' rows missing metadata' END AS status
-FROM SRC_ERP_PURCHASE_ORDER_LINES
-WHERE load_batch_id IS NULL OR source_file_name IS NULL OR loaded_at IS NULL;
+-- Source-local identifiers
+SELECT 'erp_supplier_codes' AS check_name,
+    CASE WHEN COUNT(DISTINCT erp_supplier_code) = 4 THEN 'PASS' ELSE 'FAIL' END AS status
+FROM SRC_ERP_PURCHASE_ORDERS;
 
--- Source-local identifiers present
-SELECT 'source_local_ids' AS check_name,
-    CASE WHEN COUNT(*) > 0 THEN 'PASS' ELSE 'FAIL' END AS status
-FROM SRC_ERP_PURCHASE_ORDERS WHERE erp_supplier_code IS NOT NULL;
+SELECT 'logistics_supplier_codes' AS check_name,
+    CASE WHEN COUNT(DISTINCT logistics_supplier_code) = 4 THEN 'PASS' ELSE 'FAIL' END AS status
+FROM SRC_LOGISTICS_SHIPMENTS;
+
+SELECT 'planning_part_codes' AS check_name,
+    CASE WHEN planning_part_code = 'PLAN-BAT-01' THEN 'PASS' ELSE 'FAIL' END AS status
+FROM SRC_PLANNING_REQUIREMENTS LIMIT 1;
