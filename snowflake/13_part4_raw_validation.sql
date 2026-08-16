@@ -1,331 +1,478 @@
--- Part 4: RAW data validation — readable PASS/FAIL results.
--- Every result set exposes check_name, expected_value, actual_value, status.
--- Displays all results; does not stop at the first failure (see
--- tests/part4_raw_data_tests.sql for the fail-fast counterpart).
-
+-- Part 4 readable validation. It creates temporary helper objects only.
 USE ROLE GRIZZLY03_LEARNER_RL;
 USE WAREHOUSE GRIZZLY03_WH;
 USE DATABASE CHAINPROOF;
 USE SCHEMA CHAINPROOF.RAW;
 
--- ============================================================
--- 1. Stage files: LIST instead of DIRECTORY (no directory table configured)
--- ============================================================
-LIST @CHAINPROOF.RAW.PART4_SOURCE_STAGE/v1/
-PATTERN = '.*[.]csv';
+SELECT 'active_context' check_name,
+       'GRIZZLY03_LEARNER_RL|GRIZZLY03_WH|CHAINPROOF|RAW' expected_value,
+       CURRENT_ROLE()||'|'||CURRENT_WAREHOUSE()||'|'||CURRENT_DATABASE()||'|'||CURRENT_SCHEMA() actual_value,
+       IFF(CURRENT_ROLE()||'|'||CURRENT_WAREHOUSE()||'|'||CURRENT_DATABASE()||'|'||CURRENT_SCHEMA()='GRIZZLY03_LEARNER_RL|GRIZZLY03_WH|CHAINPROOF|RAW','PASS','FAIL') status;
 
-SET part4_list_query_id = LAST_QUERY_ID();
-
-SELECT
-    "name" AS staged_file_name,
-    "size" AS file_size_bytes,
-    "md5" AS file_md5,
-    "last_modified"
-FROM TABLE(RESULT_SCAN($part4_list_query_id))
-ORDER BY staged_file_name;
-
-SELECT 'stage_file_count' AS check_name, 12 AS expected_value, COUNT(*) AS actual_value,
-    CASE WHEN COUNT(*) = 12 THEN 'PASS' ELSE 'FAIL' END AS status
+LIST @CHAINPROOF.RAW.PART4_SOURCE_STAGE/v1/ PATTERN='.*[.]csv';
+SET part4_list_query_id=LAST_QUERY_ID();
+CREATE OR REPLACE TEMP TABLE PART4_STAGE_FILES AS
+SELECT SPLIT_PART("name",'/',-1) file_name, "size" file_size, "md5" md5, "last_modified" last_modified
 FROM TABLE(RESULT_SCAN($part4_list_query_id));
 
-SELECT 'stage_files_nonzero_size' AS check_name, 0 AS expected_value, COUNT(*) AS actual_value,
-    CASE WHEN COUNT(*) = 0 THEN 'PASS' ELSE 'FAIL' END AS status
-FROM TABLE(RESULT_SCAN($part4_list_query_id))
-WHERE "size" = 0;
+DESC FILE FORMAT CHAINPROOF.RAW.PART4_CSV_FORMAT;
+SET part4_ff_query_id=LAST_QUERY_ID();
+CREATE OR REPLACE TEMP TABLE PART4_FILE_FORMAT_PROPERTIES AS
+SELECT UPPER("property") property, TO_VARCHAR("property_value") property_value
+FROM TABLE(RESULT_SCAN($part4_ff_query_id));
 
-SELECT 'stage_exact_filenames' AS check_name,
-    ARRAY_SIZE(ARRAY_INTERSECTION(
-        ARRAY_AGG("name"),
-        ARRAY_CONSTRUCT(
-            'v1/erp_part_master.csv','v1/erp_plant_master.csv','v1/erp_purchase_order_lines.csv',
-            'v1/erp_purchase_orders.csv','v1/identity_persona_map.csv','v1/logistics_carrier_master.csv',
-            'v1/logistics_receipts.csv','v1/logistics_shipment_lines.csv','v1/logistics_shipments.csv',
-            'v1/planning_requirements.csv','v1/quality_inspections.csv','v1/supplier_master.csv'
-        )
-    )) AS actual_value, 12 AS expected_value,
-    CASE WHEN ARRAY_SIZE(ARRAY_INTERSECTION(
-        ARRAY_AGG("name"),
-        ARRAY_CONSTRUCT(
-            'v1/erp_part_master.csv','v1/erp_plant_master.csv','v1/erp_purchase_order_lines.csv',
-            'v1/erp_purchase_orders.csv','v1/identity_persona_map.csv','v1/logistics_carrier_master.csv',
-            'v1/logistics_receipts.csv','v1/logistics_shipment_lines.csv','v1/logistics_shipments.csv',
-            'v1/planning_requirements.csv','v1/quality_inspections.csv','v1/supplier_master.csv'
-        )
-    )) = 12 THEN 'PASS' ELSE 'FAIL' END AS status
-FROM TABLE(RESULT_SCAN($part4_list_query_id));
-
--- ============================================================
--- 2. File-format options
--- ============================================================
-SHOW FILE FORMATS LIKE 'PART4_CSV_FORMAT' IN SCHEMA CHAINPROOF.RAW;
-
-SELECT 'file_format_exists' AS check_name, 1 AS expected_value, COUNT(*) AS actual_value,
-    CASE WHEN COUNT(*) = 1 THEN 'PASS' ELSE 'FAIL' END AS status
-FROM TABLE(RESULT_SCAN(LAST_QUERY_ID()));
-
-SHOW STAGES LIKE 'PART4_SOURCE_STAGE' IN SCHEMA CHAINPROOF.RAW;
-
-SELECT 'stage_exists' AS check_name, 1 AS expected_value, COUNT(*) AS actual_value,
-    CASE WHEN COUNT(*) = 1 THEN 'PASS' ELSE 'FAIL' END AS status
-FROM TABLE(RESULT_SCAN(LAST_QUERY_ID()));
-
--- ============================================================
--- 3. Table and column inventory
--- ============================================================
-SELECT 'raw_src_table_count' AS check_name, 12 AS expected_value, COUNT(*) AS actual_value,
-    CASE WHEN COUNT(*) = 12 THEN 'PASS' ELSE 'FAIL' END AS status
-FROM INFORMATION_SCHEMA.TABLES
-WHERE TABLE_SCHEMA = 'RAW' AND TABLE_NAME LIKE 'SRC_%';
-
--- ============================================================
--- 4. Per-table and total row counts
--- ============================================================
-SELECT table_name AS check_name, expected_value, row_count AS actual_value,
-    CASE WHEN row_count = expected_value THEN 'PASS' ELSE 'FAIL' END AS status
-FROM (
-    SELECT 'SRC_SUPPLIER_MASTER' AS table_name, COUNT(*) AS row_count, 4 AS expected_value FROM SRC_SUPPLIER_MASTER
-    UNION ALL SELECT 'SRC_ERP_PART_MASTER', COUNT(*), 1 FROM SRC_ERP_PART_MASTER
-    UNION ALL SELECT 'SRC_ERP_PLANT_MASTER', COUNT(*), 1 FROM SRC_ERP_PLANT_MASTER
-    UNION ALL SELECT 'SRC_LOGISTICS_CARRIER_MASTER', COUNT(*), 3 FROM SRC_LOGISTICS_CARRIER_MASTER
-    UNION ALL SELECT 'SRC_ERP_PURCHASE_ORDERS', COUNT(*), 13 FROM SRC_ERP_PURCHASE_ORDERS
-    UNION ALL SELECT 'SRC_ERP_PURCHASE_ORDER_LINES', COUNT(*), 13 FROM SRC_ERP_PURCHASE_ORDER_LINES
-    UNION ALL SELECT 'SRC_LOGISTICS_SHIPMENTS', COUNT(*), 15 FROM SRC_LOGISTICS_SHIPMENTS
-    UNION ALL SELECT 'SRC_LOGISTICS_SHIPMENT_LINES', COUNT(*), 15 FROM SRC_LOGISTICS_SHIPMENT_LINES
-    UNION ALL SELECT 'SRC_LOGISTICS_RECEIPTS', COUNT(*), 14 FROM SRC_LOGISTICS_RECEIPTS
-    UNION ALL SELECT 'SRC_QUALITY_INSPECTIONS', COUNT(*), 13 FROM SRC_QUALITY_INSPECTIONS
-    UNION ALL SELECT 'SRC_PLANNING_REQUIREMENTS', COUNT(*), 13 FROM SRC_PLANNING_REQUIREMENTS
-    UNION ALL SELECT 'SRC_IDENTITY_PERSONA_MAP', COUNT(*), 5 FROM SRC_IDENTITY_PERSONA_MAP
-)
-ORDER BY table_name;
-
-SELECT 'total_rows' AS check_name, 110 AS expected_value, SUM(c) AS actual_value,
-    CASE WHEN SUM(c) = 110 THEN 'PASS' ELSE 'FAIL' END AS status
-FROM (
-    SELECT COUNT(*) AS c FROM SRC_SUPPLIER_MASTER UNION ALL SELECT COUNT(*) FROM SRC_ERP_PART_MASTER
-    UNION ALL SELECT COUNT(*) FROM SRC_ERP_PLANT_MASTER UNION ALL SELECT COUNT(*) FROM SRC_LOGISTICS_CARRIER_MASTER
-    UNION ALL SELECT COUNT(*) FROM SRC_ERP_PURCHASE_ORDERS UNION ALL SELECT COUNT(*) FROM SRC_ERP_PURCHASE_ORDER_LINES
-    UNION ALL SELECT COUNT(*) FROM SRC_LOGISTICS_SHIPMENTS UNION ALL SELECT COUNT(*) FROM SRC_LOGISTICS_SHIPMENT_LINES
-    UNION ALL SELECT COUNT(*) FROM SRC_LOGISTICS_RECEIPTS UNION ALL SELECT COUNT(*) FROM SRC_QUALITY_INSPECTIONS
-    UNION ALL SELECT COUNT(*) FROM SRC_PLANNING_REQUIREMENTS UNION ALL SELECT COUNT(*) FROM SRC_IDENTITY_PERSONA_MAP
+-- Generated contract tables used only for this validation session.
+CREATE OR REPLACE TEMP TABLE PART4_EXPECTED_COLUMNS (
+    table_name VARCHAR, ordinal_position NUMBER, column_name VARCHAR,
+    data_type VARCHAR, is_nullable VARCHAR
 );
+INSERT INTO PART4_EXPECTED_COLUMNS
+SELECT column1, column2, column3, column4, column5
+FROM VALUES
+        ('SRC_SUPPLIER_MASTER', 1, 'SUPPLIER_ID', 'TEXT', 'YES'),
+        ('SRC_SUPPLIER_MASTER', 2, 'SUPPLIER_NAME', 'TEXT', 'YES'),
+        ('SRC_SUPPLIER_MASTER', 3, 'COUNTRY_CODE', 'TEXT', 'YES'),
+        ('SRC_SUPPLIER_MASTER', 4, 'CITY_NAME', 'TEXT', 'YES'),
+        ('SRC_SUPPLIER_MASTER', 5, 'SUPPLIER_STATUS', 'TEXT', 'YES'),
+        ('SRC_SUPPLIER_MASTER', 6, 'ERP_SUPPLIER_CODE', 'TEXT', 'YES'),
+        ('SRC_SUPPLIER_MASTER', 7, 'LOGISTICS_SUPPLIER_CODE', 'TEXT', 'YES'),
+        ('SRC_SUPPLIER_MASTER', 8, 'LOAD_BATCH_ID', 'TEXT', 'NO'),
+        ('SRC_SUPPLIER_MASTER', 9, 'SOURCE_FILE_NAME', 'TEXT', 'NO'),
+        ('SRC_SUPPLIER_MASTER', 10, 'SOURCE_FILE_ROW_NUMBER', 'NUMBER', 'NO'),
+        ('SRC_SUPPLIER_MASTER', 11, 'SOURCE_FILE_CONTENT_KEY', 'TEXT', 'YES'),
+        ('SRC_SUPPLIER_MASTER', 12, 'SOURCE_FILE_LAST_MODIFIED', 'TIMESTAMP_NTZ', 'YES'),
+        ('SRC_SUPPLIER_MASTER', 13, 'LOADED_AT', 'TIMESTAMP_LTZ', 'NO'),
+        ('SRC_ERP_PART_MASTER', 1, 'PART_ID', 'TEXT', 'YES'),
+        ('SRC_ERP_PART_MASTER', 2, 'PART_NAME', 'TEXT', 'YES'),
+        ('SRC_ERP_PART_MASTER', 3, 'PART_CATEGORY', 'TEXT', 'YES'),
+        ('SRC_ERP_PART_MASTER', 4, 'BASE_UOM', 'TEXT', 'YES'),
+        ('SRC_ERP_PART_MASTER', 5, 'PART_STATUS', 'TEXT', 'YES'),
+        ('SRC_ERP_PART_MASTER', 6, 'PLANNING_PART_CODE', 'TEXT', 'YES'),
+        ('SRC_ERP_PART_MASTER', 7, 'LOGISTICS_PART_CODE', 'TEXT', 'YES'),
+        ('SRC_ERP_PART_MASTER', 8, 'LOAD_BATCH_ID', 'TEXT', 'NO'),
+        ('SRC_ERP_PART_MASTER', 9, 'SOURCE_FILE_NAME', 'TEXT', 'NO'),
+        ('SRC_ERP_PART_MASTER', 10, 'SOURCE_FILE_ROW_NUMBER', 'NUMBER', 'NO'),
+        ('SRC_ERP_PART_MASTER', 11, 'SOURCE_FILE_CONTENT_KEY', 'TEXT', 'YES'),
+        ('SRC_ERP_PART_MASTER', 12, 'SOURCE_FILE_LAST_MODIFIED', 'TIMESTAMP_NTZ', 'YES'),
+        ('SRC_ERP_PART_MASTER', 13, 'LOADED_AT', 'TIMESTAMP_LTZ', 'NO'),
+        ('SRC_ERP_PLANT_MASTER', 1, 'PLANT_ID', 'TEXT', 'YES'),
+        ('SRC_ERP_PLANT_MASTER', 2, 'PLANT_NAME', 'TEXT', 'YES'),
+        ('SRC_ERP_PLANT_MASTER', 3, 'CITY_NAME', 'TEXT', 'YES'),
+        ('SRC_ERP_PLANT_MASTER', 4, 'STATE_REGION', 'TEXT', 'YES'),
+        ('SRC_ERP_PLANT_MASTER', 5, 'COUNTRY_CODE', 'TEXT', 'YES'),
+        ('SRC_ERP_PLANT_MASTER', 6, 'TIME_ZONE', 'TEXT', 'YES'),
+        ('SRC_ERP_PLANT_MASTER', 7, 'PLANT_STATUS', 'TEXT', 'YES'),
+        ('SRC_ERP_PLANT_MASTER', 8, 'PLANNING_PLANT_CODE', 'TEXT', 'YES'),
+        ('SRC_ERP_PLANT_MASTER', 9, 'LOGISTICS_PLANT_CODE', 'TEXT', 'YES'),
+        ('SRC_ERP_PLANT_MASTER', 10, 'LOAD_BATCH_ID', 'TEXT', 'NO'),
+        ('SRC_ERP_PLANT_MASTER', 11, 'SOURCE_FILE_NAME', 'TEXT', 'NO'),
+        ('SRC_ERP_PLANT_MASTER', 12, 'SOURCE_FILE_ROW_NUMBER', 'NUMBER', 'NO'),
+        ('SRC_ERP_PLANT_MASTER', 13, 'SOURCE_FILE_CONTENT_KEY', 'TEXT', 'YES'),
+        ('SRC_ERP_PLANT_MASTER', 14, 'SOURCE_FILE_LAST_MODIFIED', 'TIMESTAMP_NTZ', 'YES'),
+        ('SRC_ERP_PLANT_MASTER', 15, 'LOADED_AT', 'TIMESTAMP_LTZ', 'NO'),
+        ('SRC_LOGISTICS_CARRIER_MASTER', 1, 'CARRIER_ID', 'TEXT', 'YES'),
+        ('SRC_LOGISTICS_CARRIER_MASTER', 2, 'CARRIER_NAME', 'TEXT', 'YES'),
+        ('SRC_LOGISTICS_CARRIER_MASTER', 3, 'TRANSPORT_MODE', 'TEXT', 'YES'),
+        ('SRC_LOGISTICS_CARRIER_MASTER', 4, 'CARRIER_STATUS', 'TEXT', 'YES'),
+        ('SRC_LOGISTICS_CARRIER_MASTER', 5, 'LOAD_BATCH_ID', 'TEXT', 'NO'),
+        ('SRC_LOGISTICS_CARRIER_MASTER', 6, 'SOURCE_FILE_NAME', 'TEXT', 'NO'),
+        ('SRC_LOGISTICS_CARRIER_MASTER', 7, 'SOURCE_FILE_ROW_NUMBER', 'NUMBER', 'NO'),
+        ('SRC_LOGISTICS_CARRIER_MASTER', 8, 'SOURCE_FILE_CONTENT_KEY', 'TEXT', 'YES'),
+        ('SRC_LOGISTICS_CARRIER_MASTER', 9, 'SOURCE_FILE_LAST_MODIFIED', 'TIMESTAMP_NTZ', 'YES'),
+        ('SRC_LOGISTICS_CARRIER_MASTER', 10, 'LOADED_AT', 'TIMESTAMP_LTZ', 'NO'),
+        ('SRC_ERP_PURCHASE_ORDERS', 1, 'PO_NUMBER', 'TEXT', 'YES'),
+        ('SRC_ERP_PURCHASE_ORDERS', 2, 'ERP_SUPPLIER_CODE', 'TEXT', 'YES'),
+        ('SRC_ERP_PURCHASE_ORDERS', 3, 'PO_CREATION_DATE', 'TEXT', 'YES'),
+        ('SRC_ERP_PURCHASE_ORDERS', 4, 'DESTINATION_PLANT_ID', 'TEXT', 'YES'),
+        ('SRC_ERP_PURCHASE_ORDERS', 5, 'CURRENCY_CODE', 'TEXT', 'YES'),
+        ('SRC_ERP_PURCHASE_ORDERS', 6, 'BUYER_ID', 'TEXT', 'YES'),
+        ('SRC_ERP_PURCHASE_ORDERS', 7, 'PO_STATUS', 'TEXT', 'YES'),
+        ('SRC_ERP_PURCHASE_ORDERS', 8, 'LOAD_BATCH_ID', 'TEXT', 'NO'),
+        ('SRC_ERP_PURCHASE_ORDERS', 9, 'SOURCE_FILE_NAME', 'TEXT', 'NO'),
+        ('SRC_ERP_PURCHASE_ORDERS', 10, 'SOURCE_FILE_ROW_NUMBER', 'NUMBER', 'NO'),
+        ('SRC_ERP_PURCHASE_ORDERS', 11, 'SOURCE_FILE_CONTENT_KEY', 'TEXT', 'YES'),
+        ('SRC_ERP_PURCHASE_ORDERS', 12, 'SOURCE_FILE_LAST_MODIFIED', 'TIMESTAMP_NTZ', 'YES'),
+        ('SRC_ERP_PURCHASE_ORDERS', 13, 'LOADED_AT', 'TIMESTAMP_LTZ', 'NO'),
+        ('SRC_ERP_PURCHASE_ORDER_LINES', 1, 'PO_NUMBER', 'TEXT', 'YES'),
+        ('SRC_ERP_PURCHASE_ORDER_LINES', 2, 'PO_LINE_NUMBER', 'TEXT', 'YES'),
+        ('SRC_ERP_PURCHASE_ORDER_LINES', 3, 'PART_ID', 'TEXT', 'YES'),
+        ('SRC_ERP_PURCHASE_ORDER_LINES', 4, 'DESTINATION_PLANT_ID', 'TEXT', 'YES'),
+        ('SRC_ERP_PURCHASE_ORDER_LINES', 5, 'ORDERED_QUANTITY', 'TEXT', 'YES'),
+        ('SRC_ERP_PURCHASE_ORDER_LINES', 6, 'ORDER_UOM', 'TEXT', 'YES'),
+        ('SRC_ERP_PURCHASE_ORDER_LINES', 7, 'ORIGINAL_REQUESTED_DELIVERY_DATE', 'TEXT', 'YES'),
+        ('SRC_ERP_PURCHASE_ORDER_LINES', 8, 'REVISED_REQUESTED_DELIVERY_DATE', 'TEXT', 'YES'),
+        ('SRC_ERP_PURCHASE_ORDER_LINES', 9, 'UNIT_PRICE', 'TEXT', 'YES'),
+        ('SRC_ERP_PURCHASE_ORDER_LINES', 10, 'LINE_STATUS', 'TEXT', 'YES'),
+        ('SRC_ERP_PURCHASE_ORDER_LINES', 11, 'LOAD_BATCH_ID', 'TEXT', 'NO'),
+        ('SRC_ERP_PURCHASE_ORDER_LINES', 12, 'SOURCE_FILE_NAME', 'TEXT', 'NO'),
+        ('SRC_ERP_PURCHASE_ORDER_LINES', 13, 'SOURCE_FILE_ROW_NUMBER', 'NUMBER', 'NO'),
+        ('SRC_ERP_PURCHASE_ORDER_LINES', 14, 'SOURCE_FILE_CONTENT_KEY', 'TEXT', 'YES'),
+        ('SRC_ERP_PURCHASE_ORDER_LINES', 15, 'SOURCE_FILE_LAST_MODIFIED', 'TIMESTAMP_NTZ', 'YES'),
+        ('SRC_ERP_PURCHASE_ORDER_LINES', 16, 'LOADED_AT', 'TIMESTAMP_LTZ', 'NO'),
+        ('SRC_LOGISTICS_SHIPMENTS', 1, 'SHIPMENT_ID', 'TEXT', 'YES'),
+        ('SRC_LOGISTICS_SHIPMENTS', 2, 'LOGISTICS_SUPPLIER_CODE', 'TEXT', 'YES'),
+        ('SRC_LOGISTICS_SHIPMENTS', 3, 'CARRIER_ID', 'TEXT', 'YES'),
+        ('SRC_LOGISTICS_SHIPMENTS', 4, 'ORIGIN_LOCATION', 'TEXT', 'YES'),
+        ('SRC_LOGISTICS_SHIPMENTS', 5, 'LOGISTICS_DESTINATION_PLANT_CODE', 'TEXT', 'YES'),
+        ('SRC_LOGISTICS_SHIPMENTS', 6, 'SHIP_DATE', 'TEXT', 'YES'),
+        ('SRC_LOGISTICS_SHIPMENTS', 7, 'SHIPMENT_STATUS', 'TEXT', 'YES'),
+        ('SRC_LOGISTICS_SHIPMENTS', 8, 'TRACKING_REFERENCE', 'TEXT', 'YES'),
+        ('SRC_LOGISTICS_SHIPMENTS', 9, 'LOAD_BATCH_ID', 'TEXT', 'NO'),
+        ('SRC_LOGISTICS_SHIPMENTS', 10, 'SOURCE_FILE_NAME', 'TEXT', 'NO'),
+        ('SRC_LOGISTICS_SHIPMENTS', 11, 'SOURCE_FILE_ROW_NUMBER', 'NUMBER', 'NO'),
+        ('SRC_LOGISTICS_SHIPMENTS', 12, 'SOURCE_FILE_CONTENT_KEY', 'TEXT', 'YES'),
+        ('SRC_LOGISTICS_SHIPMENTS', 13, 'SOURCE_FILE_LAST_MODIFIED', 'TIMESTAMP_NTZ', 'YES'),
+        ('SRC_LOGISTICS_SHIPMENTS', 14, 'LOADED_AT', 'TIMESTAMP_LTZ', 'NO'),
+        ('SRC_LOGISTICS_SHIPMENT_LINES', 1, 'SHIPMENT_ID', 'TEXT', 'YES'),
+        ('SRC_LOGISTICS_SHIPMENT_LINES', 2, 'SHIPMENT_LINE_NUMBER', 'TEXT', 'YES'),
+        ('SRC_LOGISTICS_SHIPMENT_LINES', 3, 'PO_NUMBER', 'TEXT', 'YES'),
+        ('SRC_LOGISTICS_SHIPMENT_LINES', 4, 'PO_LINE_NUMBER', 'TEXT', 'YES'),
+        ('SRC_LOGISTICS_SHIPMENT_LINES', 5, 'LOGISTICS_PART_CODE', 'TEXT', 'YES'),
+        ('SRC_LOGISTICS_SHIPMENT_LINES', 6, 'SHIPPED_QUANTITY', 'TEXT', 'YES'),
+        ('SRC_LOGISTICS_SHIPMENT_LINES', 7, 'SHIPMENT_UOM', 'TEXT', 'YES'),
+        ('SRC_LOGISTICS_SHIPMENT_LINES', 8, 'ORIGINAL_CARRIER_COMMITMENT_DATE', 'TEXT', 'YES'),
+        ('SRC_LOGISTICS_SHIPMENT_LINES', 9, 'REVISED_CARRIER_COMMITMENT_DATE', 'TEXT', 'YES'),
+        ('SRC_LOGISTICS_SHIPMENT_LINES', 10, 'LINE_STATUS', 'TEXT', 'YES'),
+        ('SRC_LOGISTICS_SHIPMENT_LINES', 11, 'LOAD_BATCH_ID', 'TEXT', 'NO'),
+        ('SRC_LOGISTICS_SHIPMENT_LINES', 12, 'SOURCE_FILE_NAME', 'TEXT', 'NO'),
+        ('SRC_LOGISTICS_SHIPMENT_LINES', 13, 'SOURCE_FILE_ROW_NUMBER', 'NUMBER', 'NO'),
+        ('SRC_LOGISTICS_SHIPMENT_LINES', 14, 'SOURCE_FILE_CONTENT_KEY', 'TEXT', 'YES'),
+        ('SRC_LOGISTICS_SHIPMENT_LINES', 15, 'SOURCE_FILE_LAST_MODIFIED', 'TIMESTAMP_NTZ', 'YES'),
+        ('SRC_LOGISTICS_SHIPMENT_LINES', 16, 'LOADED_AT', 'TIMESTAMP_LTZ', 'NO'),
+        ('SRC_LOGISTICS_RECEIPTS', 1, 'RECEIPT_ID', 'TEXT', 'YES'),
+        ('SRC_LOGISTICS_RECEIPTS', 2, 'SHIPMENT_ID', 'TEXT', 'YES'),
+        ('SRC_LOGISTICS_RECEIPTS', 3, 'SHIPMENT_LINE_NUMBER', 'TEXT', 'YES'),
+        ('SRC_LOGISTICS_RECEIPTS', 4, 'LOGISTICS_PLANT_CODE', 'TEXT', 'YES'),
+        ('SRC_LOGISTICS_RECEIPTS', 5, 'PHYSICAL_RECEIVED_QUANTITY', 'TEXT', 'YES'),
+        ('SRC_LOGISTICS_RECEIPTS', 6, 'RECEIPT_UOM', 'TEXT', 'YES'),
+        ('SRC_LOGISTICS_RECEIPTS', 7, 'RECEIPT_DATE', 'TEXT', 'YES'),
+        ('SRC_LOGISTICS_RECEIPTS', 8, 'RECEIVING_DOCK', 'TEXT', 'YES'),
+        ('SRC_LOGISTICS_RECEIPTS', 9, 'RECEIPT_STATUS', 'TEXT', 'YES'),
+        ('SRC_LOGISTICS_RECEIPTS', 10, 'LOAD_BATCH_ID', 'TEXT', 'NO'),
+        ('SRC_LOGISTICS_RECEIPTS', 11, 'SOURCE_FILE_NAME', 'TEXT', 'NO'),
+        ('SRC_LOGISTICS_RECEIPTS', 12, 'SOURCE_FILE_ROW_NUMBER', 'NUMBER', 'NO'),
+        ('SRC_LOGISTICS_RECEIPTS', 13, 'SOURCE_FILE_CONTENT_KEY', 'TEXT', 'YES'),
+        ('SRC_LOGISTICS_RECEIPTS', 14, 'SOURCE_FILE_LAST_MODIFIED', 'TIMESTAMP_NTZ', 'YES'),
+        ('SRC_LOGISTICS_RECEIPTS', 15, 'LOADED_AT', 'TIMESTAMP_LTZ', 'NO'),
+        ('SRC_QUALITY_INSPECTIONS', 1, 'INSPECTION_ID', 'TEXT', 'YES'),
+        ('SRC_QUALITY_INSPECTIONS', 2, 'RECEIPT_ID', 'TEXT', 'YES'),
+        ('SRC_QUALITY_INSPECTIONS', 3, 'INSPECTION_COMPLETION_DATE', 'TEXT', 'YES'),
+        ('SRC_QUALITY_INSPECTIONS', 4, 'INSPECTED_QUANTITY', 'TEXT', 'YES'),
+        ('SRC_QUALITY_INSPECTIONS', 5, 'ACCEPTED_QUANTITY', 'TEXT', 'YES'),
+        ('SRC_QUALITY_INSPECTIONS', 6, 'REJECTED_QUANTITY', 'TEXT', 'YES'),
+        ('SRC_QUALITY_INSPECTIONS', 7, 'DAMAGED_QUANTITY', 'TEXT', 'YES'),
+        ('SRC_QUALITY_INSPECTIONS', 8, 'INSPECTION_UOM', 'TEXT', 'YES'),
+        ('SRC_QUALITY_INSPECTIONS', 9, 'DISPOSITION', 'TEXT', 'YES'),
+        ('SRC_QUALITY_INSPECTIONS', 10, 'INSPECTION_STATUS', 'TEXT', 'YES'),
+        ('SRC_QUALITY_INSPECTIONS', 11, 'LOAD_BATCH_ID', 'TEXT', 'NO'),
+        ('SRC_QUALITY_INSPECTIONS', 12, 'SOURCE_FILE_NAME', 'TEXT', 'NO'),
+        ('SRC_QUALITY_INSPECTIONS', 13, 'SOURCE_FILE_ROW_NUMBER', 'NUMBER', 'NO'),
+        ('SRC_QUALITY_INSPECTIONS', 14, 'SOURCE_FILE_CONTENT_KEY', 'TEXT', 'YES'),
+        ('SRC_QUALITY_INSPECTIONS', 15, 'SOURCE_FILE_LAST_MODIFIED', 'TIMESTAMP_NTZ', 'YES'),
+        ('SRC_QUALITY_INSPECTIONS', 16, 'LOADED_AT', 'TIMESTAMP_LTZ', 'NO'),
+        ('SRC_PLANNING_REQUIREMENTS', 1, 'PLANNING_RECORD_ID', 'TEXT', 'YES'),
+        ('SRC_PLANNING_REQUIREMENTS', 2, 'PRODUCTION_PLAN_ID', 'TEXT', 'YES'),
+        ('SRC_PLANNING_REQUIREMENTS', 3, 'PLANNING_PART_CODE', 'TEXT', 'YES'),
+        ('SRC_PLANNING_REQUIREMENTS', 4, 'PLANNING_PLANT_CODE', 'TEXT', 'YES'),
+        ('SRC_PLANNING_REQUIREMENTS', 5, 'PRODUCTION_NEED_DATE', 'TEXT', 'YES'),
+        ('SRC_PLANNING_REQUIREMENTS', 6, 'REQUIRED_QUANTITY', 'TEXT', 'YES'),
+        ('SRC_PLANNING_REQUIREMENTS', 7, 'REQUIREMENT_UOM', 'TEXT', 'YES'),
+        ('SRC_PLANNING_REQUIREMENTS', 8, 'USABLE_QUANTITY_AVAILABLE_BY_NEED_DATE', 'TEXT', 'YES'),
+        ('SRC_PLANNING_REQUIREMENTS', 9, 'SNAPSHOT_TIMESTAMP', 'TEXT', 'YES'),
+        ('SRC_PLANNING_REQUIREMENTS', 10, 'REQUIREMENT_STATUS', 'TEXT', 'YES'),
+        ('SRC_PLANNING_REQUIREMENTS', 11, 'LOAD_BATCH_ID', 'TEXT', 'NO'),
+        ('SRC_PLANNING_REQUIREMENTS', 12, 'SOURCE_FILE_NAME', 'TEXT', 'NO'),
+        ('SRC_PLANNING_REQUIREMENTS', 13, 'SOURCE_FILE_ROW_NUMBER', 'NUMBER', 'NO'),
+        ('SRC_PLANNING_REQUIREMENTS', 14, 'SOURCE_FILE_CONTENT_KEY', 'TEXT', 'YES'),
+        ('SRC_PLANNING_REQUIREMENTS', 15, 'SOURCE_FILE_LAST_MODIFIED', 'TIMESTAMP_NTZ', 'YES'),
+        ('SRC_PLANNING_REQUIREMENTS', 16, 'LOADED_AT', 'TIMESTAMP_LTZ', 'NO'),
+        ('SRC_IDENTITY_PERSONA_MAP', 1, 'USER_ID', 'TEXT', 'YES'),
+        ('SRC_IDENTITY_PERSONA_MAP', 2, 'SNOWFLAKE_USER_NAME', 'TEXT', 'YES'),
+        ('SRC_IDENTITY_PERSONA_MAP', 3, 'DEFAULT_PERSONA', 'TEXT', 'YES'),
+        ('SRC_IDENTITY_PERSONA_MAP', 4, 'DEFAULT_PLANT_SCOPE', 'TEXT', 'YES'),
+        ('SRC_IDENTITY_PERSONA_MAP', 5, 'CAN_APPROVE_METRICS', 'TEXT', 'YES'),
+        ('SRC_IDENTITY_PERSONA_MAP', 6, 'ASSIGNMENT_STATUS', 'TEXT', 'YES'),
+        ('SRC_IDENTITY_PERSONA_MAP', 7, 'EFFECTIVE_START_DATE', 'TEXT', 'YES'),
+        ('SRC_IDENTITY_PERSONA_MAP', 8, 'EFFECTIVE_END_DATE', 'TEXT', 'YES'),
+        ('SRC_IDENTITY_PERSONA_MAP', 9, 'LOAD_BATCH_ID', 'TEXT', 'NO'),
+        ('SRC_IDENTITY_PERSONA_MAP', 10, 'SOURCE_FILE_NAME', 'TEXT', 'NO'),
+        ('SRC_IDENTITY_PERSONA_MAP', 11, 'SOURCE_FILE_ROW_NUMBER', 'NUMBER', 'NO'),
+        ('SRC_IDENTITY_PERSONA_MAP', 12, 'SOURCE_FILE_CONTENT_KEY', 'TEXT', 'YES'),
+        ('SRC_IDENTITY_PERSONA_MAP', 13, 'SOURCE_FILE_LAST_MODIFIED', 'TIMESTAMP_NTZ', 'YES'),
+        ('SRC_IDENTITY_PERSONA_MAP', 14, 'LOADED_AT', 'TIMESTAMP_LTZ', 'NO');
 
--- ============================================================
--- 5. Metadata completeness
--- ============================================================
-SELECT 'metadata_complete_po_lines' AS check_name, 0 AS expected_value, COUNT(*) AS actual_value,
-    CASE WHEN COUNT(*) = 0 THEN 'PASS' ELSE 'FAIL' END AS status
-FROM SRC_ERP_PURCHASE_ORDER_LINES
-WHERE load_batch_id IS NULL OR source_file_name IS NULL OR source_file_row_number IS NULL OR loaded_at IS NULL;
+CREATE OR REPLACE TEMP TABLE PART4_EXPECTED_COUNTS (
+    table_name VARCHAR, expected_rows NUMBER
+);
+INSERT INTO PART4_EXPECTED_COUNTS
+SELECT column1, column2 FROM VALUES
+    ('SRC_SUPPLIER_MASTER',4),
+    ('SRC_ERP_PART_MASTER',1),
+    ('SRC_ERP_PLANT_MASTER',1),
+    ('SRC_LOGISTICS_CARRIER_MASTER',3),
+    ('SRC_ERP_PURCHASE_ORDERS',13),
+    ('SRC_ERP_PURCHASE_ORDER_LINES',13),
+    ('SRC_LOGISTICS_SHIPMENTS',15),
+    ('SRC_LOGISTICS_SHIPMENT_LINES',15),
+    ('SRC_LOGISTICS_RECEIPTS',14),
+    ('SRC_QUALITY_INSPECTIONS',13),
+    ('SRC_PLANNING_REQUIREMENTS',13),
+    ('SRC_IDENTITY_PERSONA_MAP',5);
 
-SELECT 'batch_id_all_synthetic_v1' AS check_name, 0 AS expected_value, COUNT(*) AS actual_value,
-    CASE WHEN COUNT(*) = 0 THEN 'PASS' ELSE 'FAIL' END AS status
-FROM SRC_ERP_PURCHASE_ORDER_LINES
-WHERE load_batch_id != 'PART4_SYNTHETIC_V1';
+CREATE OR REPLACE TEMP VIEW PART4_ACTUAL_COUNTS AS
+SELECT 'SRC_SUPPLIER_MASTER' table_name, COUNT(*) actual_rows FROM SRC_SUPPLIER_MASTER UNION ALL
+SELECT 'SRC_ERP_PART_MASTER', COUNT(*) FROM SRC_ERP_PART_MASTER UNION ALL
+SELECT 'SRC_ERP_PLANT_MASTER', COUNT(*) FROM SRC_ERP_PLANT_MASTER UNION ALL
+SELECT 'SRC_LOGISTICS_CARRIER_MASTER', COUNT(*) FROM SRC_LOGISTICS_CARRIER_MASTER UNION ALL
+SELECT 'SRC_ERP_PURCHASE_ORDERS', COUNT(*) FROM SRC_ERP_PURCHASE_ORDERS UNION ALL
+SELECT 'SRC_ERP_PURCHASE_ORDER_LINES', COUNT(*) FROM SRC_ERP_PURCHASE_ORDER_LINES UNION ALL
+SELECT 'SRC_LOGISTICS_SHIPMENTS', COUNT(*) FROM SRC_LOGISTICS_SHIPMENTS UNION ALL
+SELECT 'SRC_LOGISTICS_SHIPMENT_LINES', COUNT(*) FROM SRC_LOGISTICS_SHIPMENT_LINES UNION ALL
+SELECT 'SRC_LOGISTICS_RECEIPTS', COUNT(*) FROM SRC_LOGISTICS_RECEIPTS UNION ALL
+SELECT 'SRC_QUALITY_INSPECTIONS', COUNT(*) FROM SRC_QUALITY_INSPECTIONS UNION ALL
+SELECT 'SRC_PLANNING_REQUIREMENTS', COUNT(*) FROM SRC_PLANNING_REQUIREMENTS UNION ALL
+SELECT 'SRC_IDENTITY_PERSONA_MAP', COUNT(*) FROM SRC_IDENTITY_PERSONA_MAP;
 
--- ============================================================
--- 6. Key duplication counts
--- ============================================================
-SELECT 'duplicate_po_numbers' AS check_name, 0 AS expected_value, COUNT(*) AS actual_value,
-    CASE WHEN COUNT(*) = 0 THEN 'PASS' ELSE 'FAIL' END AS status
-FROM (SELECT po_number FROM SRC_ERP_PURCHASE_ORDERS GROUP BY po_number HAVING COUNT(*) > 1);
+CREATE OR REPLACE TEMP VIEW PART4_ALL_METADATA AS
+SELECT 'SRC_SUPPLIER_MASTER' table_name, load_batch_id, source_file_name, source_file_row_number, loaded_at FROM SRC_SUPPLIER_MASTER UNION ALL
+SELECT 'SRC_ERP_PART_MASTER', load_batch_id, source_file_name, source_file_row_number, loaded_at FROM SRC_ERP_PART_MASTER UNION ALL
+SELECT 'SRC_ERP_PLANT_MASTER', load_batch_id, source_file_name, source_file_row_number, loaded_at FROM SRC_ERP_PLANT_MASTER UNION ALL
+SELECT 'SRC_LOGISTICS_CARRIER_MASTER', load_batch_id, source_file_name, source_file_row_number, loaded_at FROM SRC_LOGISTICS_CARRIER_MASTER UNION ALL
+SELECT 'SRC_ERP_PURCHASE_ORDERS', load_batch_id, source_file_name, source_file_row_number, loaded_at FROM SRC_ERP_PURCHASE_ORDERS UNION ALL
+SELECT 'SRC_ERP_PURCHASE_ORDER_LINES', load_batch_id, source_file_name, source_file_row_number, loaded_at FROM SRC_ERP_PURCHASE_ORDER_LINES UNION ALL
+SELECT 'SRC_LOGISTICS_SHIPMENTS', load_batch_id, source_file_name, source_file_row_number, loaded_at FROM SRC_LOGISTICS_SHIPMENTS UNION ALL
+SELECT 'SRC_LOGISTICS_SHIPMENT_LINES', load_batch_id, source_file_name, source_file_row_number, loaded_at FROM SRC_LOGISTICS_SHIPMENT_LINES UNION ALL
+SELECT 'SRC_LOGISTICS_RECEIPTS', load_batch_id, source_file_name, source_file_row_number, loaded_at FROM SRC_LOGISTICS_RECEIPTS UNION ALL
+SELECT 'SRC_QUALITY_INSPECTIONS', load_batch_id, source_file_name, source_file_row_number, loaded_at FROM SRC_QUALITY_INSPECTIONS UNION ALL
+SELECT 'SRC_PLANNING_REQUIREMENTS', load_batch_id, source_file_name, source_file_row_number, loaded_at FROM SRC_PLANNING_REQUIREMENTS UNION ALL
+SELECT 'SRC_IDENTITY_PERSONA_MAP', load_batch_id, source_file_name, source_file_row_number, loaded_at FROM SRC_IDENTITY_PERSONA_MAP;
 
-SELECT 'duplicate_shipment_ids' AS check_name, 0 AS expected_value, COUNT(*) AS actual_value,
-    CASE WHEN COUNT(*) = 0 THEN 'PASS' ELSE 'FAIL' END AS status
-FROM (SELECT shipment_id FROM SRC_LOGISTICS_SHIPMENTS GROUP BY shipment_id HAVING COUNT(*) > 1);
+CREATE OR REPLACE TEMP TABLE PART4_EXPECTED_SCENARIOS (
+    po_number VARCHAR, planning_record_id VARCHAR,
+    expected_proc_num NUMBER(18,6), expected_proc_den NUMBER(18,6),
+    expected_log_num NUMBER(18,6), expected_log_den NUMBER(18,6),
+    expected_plan_num NUMBER(18,6), expected_plan_den NUMBER(18,6)
+);
+INSERT INTO PART4_EXPECTED_SCENARIOS
+SELECT * FROM VALUES
+    ('PO-5001','PLN-5001',85,100,90,100,95,100),
+    ('PO-5002','PLN-5002',50,50,50,50,50,50),
+    ('PO-5003','PLN-5003',0,80,0,80,80,80),
+    ('PO-5004','PLN-5004',48,120,100,120,118,120),
+    ('PO-5005','PLN-5005',60,60,70,70,60,60),
+    ('PO-5006','PLN-5006',0,40,0,40,40,40),
+    ('PO-5007','PLN-5007',0,30,30,30,0,30),
+    ('PO-5008','PLN-5008',45,75,75,75,70,75);
 
-SELECT 'duplicate_receipt_ids' AS check_name, 0 AS expected_value, COUNT(*) AS actual_value,
-    CASE WHEN COUNT(*) = 0 THEN 'PASS' ELSE 'FAIL' END AS status
-FROM (SELECT receipt_id FROM SRC_LOGISTICS_RECEIPTS GROUP BY receipt_id HAVING COUNT(*) > 1);
-
-SELECT 'duplicate_inspection_ids' AS check_name, 0 AS expected_value, COUNT(*) AS actual_value,
-    CASE WHEN COUNT(*) = 0 THEN 'PASS' ELSE 'FAIL' END AS status
-FROM (SELECT inspection_id FROM SRC_QUALITY_INSPECTIONS GROUP BY inspection_id HAVING COUNT(*) > 1);
-
--- ============================================================
--- 7. Orphan / relationship-integrity counts
--- ============================================================
-SELECT 'orphan_po_lines' AS check_name, 0 AS expected_value, COUNT(*) AS actual_value,
-    CASE WHEN COUNT(*) = 0 THEN 'PASS' ELSE 'FAIL' END AS status
-FROM SRC_ERP_PURCHASE_ORDER_LINES l
-LEFT JOIN SRC_ERP_PURCHASE_ORDERS h ON l.po_number = h.po_number
-WHERE h.po_number IS NULL;
-
-SELECT 'orphan_shipment_lines' AS check_name, 0 AS expected_value, COUNT(*) AS actual_value,
-    CASE WHEN COUNT(*) = 0 THEN 'PASS' ELSE 'FAIL' END AS status
-FROM SRC_LOGISTICS_SHIPMENT_LINES sl
-LEFT JOIN SRC_LOGISTICS_SHIPMENTS s ON sl.shipment_id = s.shipment_id
-LEFT JOIN SRC_ERP_PURCHASE_ORDER_LINES pl ON sl.po_number = pl.po_number AND sl.po_line_number = pl.po_line_number
-WHERE s.shipment_id IS NULL OR pl.po_number IS NULL;
-
-SELECT 'orphan_receipts' AS check_name, 0 AS expected_value, COUNT(*) AS actual_value,
-    CASE WHEN COUNT(*) = 0 THEN 'PASS' ELSE 'FAIL' END AS status
-FROM SRC_LOGISTICS_RECEIPTS r
-LEFT JOIN SRC_LOGISTICS_SHIPMENT_LINES sl
-    ON r.shipment_id = sl.shipment_id AND r.shipment_line_number = sl.shipment_line_number
-WHERE sl.shipment_id IS NULL;
-
-SELECT 'orphan_inspections' AS check_name, 0 AS expected_value, COUNT(*) AS actual_value,
-    CASE WHEN COUNT(*) = 0 THEN 'PASS' ELSE 'FAIL' END AS status
-FROM SRC_QUALITY_INSPECTIONS i
-LEFT JOIN SRC_LOGISTICS_RECEIPTS r ON i.receipt_id = r.receipt_id
-WHERE r.receipt_id IS NULL;
-
--- ============================================================
--- 8. Inspection arithmetic violations
--- ============================================================
-SELECT 'inspection_accepted_plus_rejected_eq_inspected' AS check_name, 0 AS expected_value, COUNT(*) AS actual_value,
-    CASE WHEN COUNT(*) = 0 THEN 'PASS' ELSE 'FAIL' END AS status
-FROM SRC_QUALITY_INSPECTIONS
-WHERE TRY_CAST(accepted_quantity AS INTEGER) + TRY_CAST(rejected_quantity AS INTEGER)
-      != TRY_CAST(inspected_quantity AS INTEGER);
-
-SELECT 'inspection_damaged_le_rejected' AS check_name, 0 AS expected_value, COUNT(*) AS actual_value,
-    CASE WHEN COUNT(*) = 0 THEN 'PASS' ELSE 'FAIL' END AS status
-FROM SRC_QUALITY_INSPECTIONS
-WHERE TRY_CAST(damaged_quantity AS INTEGER) > TRY_CAST(rejected_quantity AS INTEGER);
-
-SELECT 'inspection_inspected_le_physical_received' AS check_name, 0 AS expected_value, COUNT(*) AS actual_value,
-    CASE WHEN COUNT(*) = 0 THEN 'PASS' ELSE 'FAIL' END AS status
-FROM SRC_QUALITY_INSPECTIONS i
-JOIN SRC_LOGISTICS_RECEIPTS r ON i.receipt_id = r.receipt_id
-WHERE TRY_CAST(i.inspected_quantity AS INTEGER) > TRY_CAST(r.physical_received_quantity AS INTEGER);
-
-SELECT 'r8010_no_inspection' AS check_name, 0 AS expected_value, COUNT(*) AS actual_value,
-    CASE WHEN COUNT(*) = 0 THEN 'PASS' ELSE 'FAIL' END AS status
-FROM SRC_QUALITY_INSPECTIONS WHERE receipt_id = 'R-8010';
-
--- ============================================================
--- 9. Each PO scenario result (Procurement / Logistics / Planning)
--- ============================================================
-WITH po_procurement AS (
+CREATE OR REPLACE TEMP VIEW PART4_PROCUREMENT_ACTUAL AS
+WITH per_po AS (
     SELECT
-        pl.po_number,
-        TRY_CAST(pl.ordered_quantity AS INTEGER) AS ordered_qty,
-        SUM(CASE
-                WHEN TRY_CAST(r.receipt_date AS DATE) <= TRY_CAST(pl.original_requested_delivery_date AS DATE)
-                THEN TRY_CAST(i.accepted_quantity AS INTEGER) ELSE 0
-            END) AS accepted_on_time
-    FROM SRC_ERP_PURCHASE_ORDER_LINES pl
-    LEFT JOIN SRC_LOGISTICS_SHIPMENT_LINES sl ON pl.po_number = sl.po_number AND pl.po_line_number = sl.po_line_number
-    LEFT JOIN SRC_LOGISTICS_RECEIPTS r ON sl.shipment_id = r.shipment_id AND sl.shipment_line_number = r.shipment_line_number
-    LEFT JOIN SRC_QUALITY_INSPECTIONS i ON r.receipt_id = i.receipt_id
-    WHERE pl.po_number IN ('PO-5001','PO-5002','PO-5003','PO-5004','PO-5005','PO-5006','PO-5007','PO-5008')
-    GROUP BY pl.po_number, pl.ordered_quantity
+        pol.po_number,
+        TRY_TO_DECIMAL(pol.ordered_quantity, 18, 6) ordered_qty,
+        COALESCE(SUM(IFF(
+            TRY_TO_DATE(r.receipt_date) <= TRY_TO_DATE(pol.original_requested_delivery_date)
+            AND UPPER(COALESCE(i.inspection_status,'')) = 'FINAL',
+            COALESCE(TRY_TO_DECIMAL(i.accepted_quantity,18,6),0),
+            0
+        )),0) accepted_on_time
+    FROM SRC_ERP_PURCHASE_ORDER_LINES pol
+    LEFT JOIN SRC_LOGISTICS_SHIPMENT_LINES sl
+      ON sl.po_number=pol.po_number AND sl.po_line_number=pol.po_line_number
+    LEFT JOIN SRC_LOGISTICS_RECEIPTS r
+      ON r.shipment_id=sl.shipment_id AND r.shipment_line_number=sl.shipment_line_number
+    LEFT JOIN SRC_QUALITY_INSPECTIONS i ON i.receipt_id=r.receipt_id
+    WHERE pol.po_number IN (SELECT po_number FROM PART4_EXPECTED_SCENARIOS)
+    GROUP BY pol.po_number, TRY_TO_DECIMAL(pol.ordered_quantity,18,6)
 )
-SELECT 'procurement_' || po_number AS check_name,
-    ordered_qty AS expected_denominator,
-    LEAST(accepted_on_time, ordered_qty) AS actual_numerator,
-    'INFO' AS status
-FROM po_procurement
-ORDER BY po_number;
+SELECT po_number, LEAST(ordered_qty, accepted_on_time) numerator, ordered_qty denominator
+FROM per_po;
 
-WITH po_logistics AS (
+CREATE OR REPLACE TEMP VIEW PART4_LOGISTICS_ACTUAL AS
+WITH per_line AS (
     SELECT
-        sl.po_number,
-        SUM(TRY_CAST(sl.shipped_quantity AS INTEGER)) AS shipped_qty,
-        SUM(CASE
-                WHEN TRY_CAST(r.receipt_date AS DATE) <=
-                     TRY_CAST(COALESCE(sl.original_carrier_commitment_date, sl.revised_carrier_commitment_date) AS DATE)
-                THEN LEAST(TRY_CAST(r.physical_received_quantity AS INTEGER), TRY_CAST(sl.shipped_quantity AS INTEGER))
-                ELSE 0
-            END) AS on_time_qty
+        sl.po_number, sl.shipment_id, sl.shipment_line_number,
+        TRY_TO_DECIMAL(sl.shipped_quantity,18,6) shipped_qty,
+        COALESCE(SUM(IFF(
+            TRY_TO_DATE(r.receipt_date) <= TRY_TO_DATE(sl.original_carrier_commitment_date),
+            COALESCE(TRY_TO_DECIMAL(r.physical_received_quantity,18,6),0),
+            0
+        )),0) received_on_time
     FROM SRC_LOGISTICS_SHIPMENT_LINES sl
-    LEFT JOIN SRC_LOGISTICS_RECEIPTS r ON sl.shipment_id = r.shipment_id AND sl.shipment_line_number = r.shipment_line_number
-    WHERE sl.po_number IN ('PO-5001','PO-5002','PO-5003','PO-5004','PO-5005','PO-5006','PO-5007','PO-5008')
-    GROUP BY sl.po_number
+    LEFT JOIN SRC_LOGISTICS_RECEIPTS r
+      ON r.shipment_id=sl.shipment_id AND r.shipment_line_number=sl.shipment_line_number
+    WHERE sl.po_number IN (SELECT po_number FROM PART4_EXPECTED_SCENARIOS)
+    GROUP BY sl.po_number, sl.shipment_id, sl.shipment_line_number,
+             TRY_TO_DECIMAL(sl.shipped_quantity,18,6)
+), per_po AS (
+    SELECT po_number,
+           SUM(LEAST(shipped_qty, received_on_time)) numerator,
+           SUM(shipped_qty) denominator
+    FROM per_line GROUP BY po_number
 )
-SELECT 'logistics_' || po_number AS check_name, shipped_qty AS expected_denominator,
-    on_time_qty AS actual_numerator, 'INFO' AS status
-FROM po_logistics
-ORDER BY po_number;
+SELECT * FROM per_po;
 
-SELECT 'planning_' || planning_record_id AS check_name,
-    TRY_CAST(required_quantity AS INTEGER) AS expected_denominator,
-    LEAST(TRY_CAST(usable_quantity_available_by_need_date AS INTEGER), TRY_CAST(required_quantity AS INTEGER)) AS actual_numerator,
-    'INFO' AS status
-FROM SRC_PLANNING_REQUIREMENTS
-WHERE requirement_status != 'CANCELLED'
-ORDER BY planning_record_id;
+CREATE OR REPLACE TEMP VIEW PART4_PLANNING_ACTUAL AS
+SELECT e.po_number,
+       LEAST(TRY_TO_DECIMAL(p.required_quantity,18,6),
+             TRY_TO_DECIMAL(p.usable_quantity_available_by_need_date,18,6)) numerator,
+       TRY_TO_DECIMAL(p.required_quantity,18,6) denominator
+FROM PART4_EXPECTED_SCENARIOS e
+JOIN SRC_PLANNING_REQUIREMENTS p ON p.planning_record_id=e.planning_record_id;
 
--- ============================================================
--- 10. Aggregate ratio-of-sums results (exact)
--- ============================================================
-SELECT 'aggregate_procurement_enterprise' AS check_name, 0.5189189189 AS expected_value,
-    ROUND(288.0 / 555.0, 10) AS actual_value,
-    CASE WHEN ROUND(288.0 / 555.0, 10) = 0.5189189189 THEN 'PASS' ELSE 'FAIL' END AS status;
+CREATE OR REPLACE TEMP VIEW PART4_SCENARIO_ACTUAL AS
+SELECT e.po_number,
+       p.numerator proc_num, p.denominator proc_den,
+       l.numerator log_num, l.denominator log_den,
+       n.numerator plan_num, n.denominator plan_den
+FROM PART4_EXPECTED_SCENARIOS e
+LEFT JOIN PART4_PROCUREMENT_ACTUAL p ON p.po_number=e.po_number
+LEFT JOIN PART4_LOGISTICS_ACTUAL l ON l.po_number=e.po_number
+LEFT JOIN PART4_PLANNING_ACTUAL n ON n.po_number=e.po_number;
 
-SELECT 'aggregate_logistics' AS check_name, 0.7345132743 AS expected_value,
-    ROUND(415.0 / 565.0, 10) AS actual_value,
-    CASE WHEN ROUND(415.0 / 565.0, 10) = 0.7345132743 THEN 'PASS' ELSE 'FAIL' END AS status;
 
-SELECT 'aggregate_planning' AS check_name, 0.9243243243 AS expected_value,
-    ROUND(513.0 / 555.0, 10) AS actual_value,
-    CASE WHEN ROUND(513.0 / 555.0, 10) = 0.9243243243 THEN 'PASS' ELSE 'FAIL' END AS status;
+SELECT 'stage_file_count' check_name, '12' expected_value, TO_VARCHAR(COUNT(*)) actual_value,
+       IFF(COUNT(*)=12,'PASS','FAIL') status FROM PART4_STAGE_FILES;
 
--- ============================================================
--- 11. Intentional edge-case records
--- ============================================================
-SELECT 'po5009_future_excluded' AS check_name, '2026-08-20' AS expected_value,
-    original_requested_delivery_date AS actual_value,
-    CASE WHEN original_requested_delivery_date = '2026-08-20' THEN 'PASS' ELSE 'FAIL' END AS status
-FROM SRC_ERP_PURCHASE_ORDER_LINES WHERE po_number = 'PO-5009';
+WITH expected(file_name) AS (SELECT column1 FROM VALUES
+ ('supplier_master.csv'),('erp_part_master.csv'),('erp_plant_master.csv'),('logistics_carrier_master.csv'),
+ ('erp_purchase_orders.csv'),('erp_purchase_order_lines.csv'),('logistics_shipments.csv'),
+ ('logistics_shipment_lines.csv'),('logistics_receipts.csv'),('quality_inspections.csv'),
+ ('planning_requirements.csv'),('identity_persona_map.csv')),
+mismatch AS (
+ SELECT file_name,'MISSING' issue FROM expected MINUS SELECT file_name,'MISSING' FROM PART4_STAGE_FILES
+ UNION ALL
+ SELECT file_name,'UNEXPECTED' FROM PART4_STAGE_FILES WHERE file_name NOT IN (SELECT file_name FROM expected)
+)
+SELECT 'stage_exact_file_set' check_name, '0 mismatches' expected_value, TO_VARCHAR(COUNT(*))||' mismatches' actual_value,
+       IFF(COUNT(*)=0,'PASS','FAIL') status FROM mismatch;
 
-SELECT 'po5010_cancelled_zero' AS check_name, '0' AS expected_value, ordered_quantity AS actual_value,
-    CASE WHEN ordered_quantity = '0' THEN 'PASS' ELSE 'FAIL' END AS status
-FROM SRC_ERP_PURCHASE_ORDER_LINES WHERE po_number = 'PO-5010';
+SELECT 'stage_zero_byte_files' check_name, '0' expected_value, TO_VARCHAR(COUNT_IF(file_size=0)) actual_value,
+       IFF(COUNT_IF(file_size=0)=0,'PASS','FAIL') status FROM PART4_STAGE_FILES;
 
-SELECT 'sh9014_void' AS check_name, 'VOID' AS expected_value, shipment_status AS actual_value,
-    CASE WHEN shipment_status = 'VOID' THEN 'PASS' ELSE 'FAIL' END AS status
-FROM SRC_LOGISTICS_SHIPMENTS WHERE shipment_id = 'SH-9014';
+WITH expected(property,expected_value) AS (SELECT * FROM VALUES
+ ('TYPE','CSV'),('FIELD_DELIMITER',','),('SKIP_HEADER','1'),
+ ('EMPTY_FIELD_AS_NULL','TRUE'),('ERROR_ON_COLUMN_COUNT_MISMATCH','TRUE'),
+ ('ENCODING','UTF8'),('TRIM_SPACE','FALSE'))
+SELECT 'file_format_'||LOWER(e.property) check_name, e.expected_value,
+       COALESCE(p.property_value,'<missing>') actual_value,
+       IFF(UPPER(COALESCE(p.property_value,''))=UPPER(e.expected_value),'PASS','FAIL') status
+FROM expected e LEFT JOIN PART4_FILE_FORMAT_PROPERTIES p ON p.property=e.property
+UNION ALL
+SELECT 'file_format_field_optionally_enclosed_by' check_name,'enabled; setup DDL fixes double quote' expected_value,
+       COALESCE((SELECT property_value FROM PART4_FILE_FORMAT_PROPERTIES WHERE property='FIELD_OPTIONALLY_ENCLOSED_BY'),'<missing>') actual_value,
+       IFF(
+         (SELECT property_value FROM PART4_FILE_FORMAT_PROPERTIES WHERE property='FIELD_OPTIONALLY_ENCLOSED_BY') IS NOT NULL
+         AND UPPER(TRIM((SELECT property_value FROM PART4_FILE_FORMAT_PROPERTIES WHERE property='FIELD_OPTIONALLY_ENCLOSED_BY'))) <> 'NONE',
+         'PASS','FAIL'
+       ) status;
 
-SELECT 'po5011_missing_original_dates' AS check_name, 'NULL,NOT NULL' AS expected_value,
-    original_requested_delivery_date || ',' || revised_requested_delivery_date AS actual_value,
-    CASE WHEN original_requested_delivery_date IS NULL AND revised_requested_delivery_date IS NOT NULL
-         THEN 'PASS' ELSE 'FAIL' END AS status
-FROM SRC_ERP_PURCHASE_ORDER_LINES WHERE po_number = 'PO-5011';
+WITH expected AS (SELECT DISTINCT table_name FROM PART4_EXPECTED_COLUMNS), actual AS (
+ SELECT table_name FROM CHAINPROOF.INFORMATION_SCHEMA.TABLES WHERE table_schema='RAW' AND table_type='BASE TABLE' AND table_name LIKE 'SRC_%'
+), mismatch AS (
+ SELECT table_name,'MISSING' issue FROM expected MINUS SELECT table_name,'MISSING' FROM actual
+ UNION ALL SELECT table_name,'UNEXPECTED' FROM actual WHERE table_name NOT IN (SELECT table_name FROM expected)
+)
+SELECT 'raw_exact_table_set','0 mismatches',TO_VARCHAR(COUNT(*))||' mismatches',IFF(COUNT(*)=0,'PASS','FAIL') FROM mismatch;
 
-SELECT 'po5012_not_a_number' AS check_name, 'NOT_A_NUMBER' AS expected_value, ordered_quantity AS actual_value,
-    CASE WHEN ordered_quantity = 'NOT_A_NUMBER' THEN 'PASS' ELSE 'FAIL' END AS status
-FROM SRC_ERP_PURCHASE_ORDER_LINES WHERE po_number = 'PO-5012';
+WITH actual AS (
+ SELECT table_name,ordinal_position,column_name,data_type,is_nullable
+ FROM CHAINPROOF.INFORMATION_SCHEMA.COLUMNS
+ WHERE table_schema='RAW'
+   AND table_name IN (SELECT DISTINCT table_name FROM PART4_EXPECTED_COLUMNS)
+), mismatch AS (
+ SELECT
+   COALESCE(e.table_name,a.table_name) table_name,
+   COALESCE(e.ordinal_position,a.ordinal_position) ordinal_position
+ FROM PART4_EXPECTED_COLUMNS e
+ FULL OUTER JOIN actual a
+   ON a.table_name=e.table_name
+  AND a.ordinal_position=e.ordinal_position
+  AND a.column_name=e.column_name
+  AND a.data_type=e.data_type
+  AND a.is_nullable=e.is_nullable
+ WHERE e.table_name IS NULL OR a.table_name IS NULL
+)
+SELECT 'raw_exact_column_contract','0 mismatches',TO_VARCHAR(COUNT(*))||' mismatches',IFF(COUNT(*)=0,'PASS','FAIL') FROM mismatch;
 
-SELECT 'po5013_box_unresolved' AS check_name, 'BOX,10' AS expected_value,
-    order_uom || ',' || ordered_quantity AS actual_value,
-    CASE WHEN order_uom = 'BOX' AND ordered_quantity = '10' THEN 'PASS' ELSE 'FAIL' END AS status
-FROM SRC_ERP_PURCHASE_ORDER_LINES WHERE po_number = 'PO-5013';
+SELECT 'row_count_'||LOWER(e.table_name),TO_VARCHAR(e.expected_rows),TO_VARCHAR(a.actual_rows),
+       IFF(a.actual_rows=e.expected_rows,'PASS','FAIL')
+FROM PART4_EXPECTED_COUNTS e LEFT JOIN PART4_ACTUAL_COUNTS a USING(table_name)
+UNION ALL
+SELECT 'row_count_total','110',TO_VARCHAR(SUM(actual_rows)),IFF(SUM(actual_rows)=110,'PASS','FAIL') FROM PART4_ACTUAL_COUNTS;
 
-SELECT 'planning_cancelled_zero' AS check_name, 1 AS expected_value, COUNT(*) AS actual_value,
-    CASE WHEN COUNT(*) = 1 THEN 'PASS' ELSE 'FAIL' END AS status
-FROM SRC_PLANNING_REQUIREMENTS WHERE requirement_status = 'CANCELLED' AND required_quantity = '0';
+SELECT 'metadata_complete','0',TO_VARCHAR(COUNT_IF(load_batch_id IS NULL OR source_file_name IS NULL OR source_file_row_number IS NULL OR loaded_at IS NULL)),
+       IFF(COUNT_IF(load_batch_id IS NULL OR source_file_name IS NULL OR source_file_row_number IS NULL OR loaded_at IS NULL)=0,'PASS','FAIL')
+FROM PART4_ALL_METADATA
+UNION ALL
+SELECT 'metadata_batch_id','0',TO_VARCHAR(COUNT_IF(load_batch_id<>'PART4_SYNTHETIC_V1')),
+       IFF(COUNT_IF(load_batch_id<>'PART4_SYNTHETIC_V1')=0,'PASS','FAIL') FROM PART4_ALL_METADATA;
 
-SELECT 'planning_missing_need_date' AS check_name, 1 AS expected_value, COUNT(*) AS actual_value,
-    CASE WHEN COUNT(*) = 1 THEN 'PASS' ELSE 'FAIL' END AS status
-FROM SRC_PLANNING_REQUIREMENTS WHERE production_need_date IS NULL;
+WITH violations AS (
+ SELECT 'duplicate_supplier' check_name,COUNT(*) issue_count FROM (SELECT supplier_id FROM SRC_SUPPLIER_MASTER GROUP BY supplier_id HAVING COUNT(*)>1)
+ UNION ALL SELECT 'duplicate_part',COUNT(*) FROM (SELECT part_id FROM SRC_ERP_PART_MASTER GROUP BY part_id HAVING COUNT(*)>1)
+ UNION ALL SELECT 'duplicate_plant',COUNT(*) FROM (SELECT plant_id FROM SRC_ERP_PLANT_MASTER GROUP BY plant_id HAVING COUNT(*)>1)
+ UNION ALL SELECT 'duplicate_carrier',COUNT(*) FROM (SELECT carrier_id FROM SRC_LOGISTICS_CARRIER_MASTER GROUP BY carrier_id HAVING COUNT(*)>1)
+ UNION ALL SELECT 'duplicate_po',COUNT(*) FROM (SELECT po_number FROM SRC_ERP_PURCHASE_ORDERS GROUP BY po_number HAVING COUNT(*)>1)
+ UNION ALL SELECT 'duplicate_po_line',COUNT(*) FROM (SELECT po_number,po_line_number FROM SRC_ERP_PURCHASE_ORDER_LINES GROUP BY po_number,po_line_number HAVING COUNT(*)>1)
+ UNION ALL SELECT 'duplicate_shipment',COUNT(*) FROM (SELECT shipment_id FROM SRC_LOGISTICS_SHIPMENTS GROUP BY shipment_id HAVING COUNT(*)>1)
+ UNION ALL SELECT 'duplicate_shipment_line',COUNT(*) FROM (SELECT shipment_id,shipment_line_number FROM SRC_LOGISTICS_SHIPMENT_LINES GROUP BY shipment_id,shipment_line_number HAVING COUNT(*)>1)
+ UNION ALL SELECT 'duplicate_receipt',COUNT(*) FROM (SELECT receipt_id FROM SRC_LOGISTICS_RECEIPTS GROUP BY receipt_id HAVING COUNT(*)>1)
+ UNION ALL SELECT 'duplicate_inspection',COUNT(*) FROM (SELECT inspection_id FROM SRC_QUALITY_INSPECTIONS GROUP BY inspection_id HAVING COUNT(*)>1)
+ UNION ALL SELECT 'duplicate_planning',COUNT(*) FROM (SELECT planning_record_id FROM SRC_PLANNING_REQUIREMENTS GROUP BY planning_record_id HAVING COUNT(*)>1)
+ UNION ALL SELECT 'duplicate_persona',COUNT(*) FROM (SELECT snowflake_user_name FROM SRC_IDENTITY_PERSONA_MAP GROUP BY snowflake_user_name HAVING COUNT(*)>1)
+ UNION ALL SELECT 'orphan_po_line',COUNT(*) FROM SRC_ERP_PURCHASE_ORDER_LINES l LEFT JOIN SRC_ERP_PURCHASE_ORDERS h USING(po_number) WHERE h.po_number IS NULL
+ UNION ALL SELECT 'orphan_shipment_line_shipment',COUNT(*) FROM SRC_LOGISTICS_SHIPMENT_LINES l LEFT JOIN SRC_LOGISTICS_SHIPMENTS h USING(shipment_id) WHERE h.shipment_id IS NULL
+ UNION ALL SELECT 'orphan_shipment_line_po',COUNT(*) FROM SRC_LOGISTICS_SHIPMENT_LINES l LEFT JOIN SRC_ERP_PURCHASE_ORDER_LINES p ON p.po_number=l.po_number AND p.po_line_number=l.po_line_number WHERE p.po_number IS NULL
+ UNION ALL SELECT 'orphan_receipt',COUNT(*) FROM SRC_LOGISTICS_RECEIPTS r LEFT JOIN SRC_LOGISTICS_SHIPMENT_LINES l ON l.shipment_id=r.shipment_id AND l.shipment_line_number=r.shipment_line_number WHERE l.shipment_id IS NULL
+ UNION ALL SELECT 'orphan_inspection',COUNT(*) FROM SRC_QUALITY_INSPECTIONS i LEFT JOIN SRC_LOGISTICS_RECEIPTS r USING(receipt_id) WHERE r.receipt_id IS NULL
+ UNION ALL SELECT 'inspection_sum_invalid',COUNT(*) FROM SRC_QUALITY_INSPECTIONS WHERE TRY_TO_DECIMAL(accepted_quantity)+TRY_TO_DECIMAL(rejected_quantity)<>TRY_TO_DECIMAL(inspected_quantity)
+ UNION ALL SELECT 'inspection_damage_invalid',COUNT(*) FROM SRC_QUALITY_INSPECTIONS WHERE TRY_TO_DECIMAL(damaged_quantity)>TRY_TO_DECIMAL(rejected_quantity)
+ UNION ALL SELECT 'inspection_received_invalid',COUNT(*) FROM SRC_QUALITY_INSPECTIONS i JOIN SRC_LOGISTICS_RECEIPTS r USING(receipt_id) WHERE TRY_TO_DECIMAL(i.inspected_quantity)>TRY_TO_DECIMAL(r.physical_received_quantity)
+ UNION ALL SELECT 'r8010_has_inspection',COUNT(*) FROM SRC_QUALITY_INSPECTIONS WHERE receipt_id='R-8010'
+)
+SELECT check_name,'0' expected_value,TO_VARCHAR(issue_count) actual_value,IFF(issue_count=0,'PASS','FAIL') status FROM violations ORDER BY check_name;
 
-SELECT 'planning_not_a_number' AS check_name, 1 AS expected_value, COUNT(*) AS actual_value,
-    CASE WHEN COUNT(*) = 1 THEN 'PASS' ELSE 'FAIL' END AS status
-FROM SRC_PLANNING_REQUIREMENTS WHERE required_quantity = 'NOT_A_NUMBER';
+SELECT 'scenario_'||LOWER(e.po_number) check_name,
+       e.expected_proc_num||'/'||e.expected_proc_den||' | '||e.expected_log_num||'/'||e.expected_log_den||' | '||e.expected_plan_num||'/'||e.expected_plan_den expected_value,
+       COALESCE(TO_VARCHAR(a.proc_num),'<null>')||'/'||COALESCE(TO_VARCHAR(a.proc_den),'<null>')||' | '||
+       COALESCE(TO_VARCHAR(a.log_num),'<null>')||'/'||COALESCE(TO_VARCHAR(a.log_den),'<null>')||' | '||
+       COALESCE(TO_VARCHAR(a.plan_num),'<null>')||'/'||COALESCE(TO_VARCHAR(a.plan_den),'<null>') actual_value,
+       IFF(e.expected_proc_num=a.proc_num AND e.expected_proc_den=a.proc_den AND e.expected_log_num=a.log_num AND e.expected_log_den=a.log_den AND e.expected_plan_num=a.plan_num AND e.expected_plan_den=a.plan_den,'PASS','FAIL') status
+FROM PART4_EXPECTED_SCENARIOS e LEFT JOIN PART4_SCENARIO_ACTUAL a USING(po_number) ORDER BY e.po_number;
 
-SELECT 'planning_box_unresolved' AS check_name, 1 AS expected_value, COUNT(*) AS actual_value,
-    CASE WHEN COUNT(*) = 1 THEN 'PASS' ELSE 'FAIL' END AS status
-FROM SRC_PLANNING_REQUIREMENTS WHERE requirement_uom = 'BOX';
+WITH actual AS (
+ SELECT SUM(proc_num) proc_num,SUM(proc_den) proc_den,SUM(log_num) log_num,SUM(log_den) log_den,SUM(plan_num) plan_num,SUM(plan_den) plan_den FROM PART4_SCENARIO_ACTUAL
+)
+SELECT 'aggregate_procurement_enterprise','288/555',proc_num||'/'||proc_den,IFF(proc_num=288 AND proc_den=555,'PASS','FAIL') FROM actual
+UNION ALL SELECT 'aggregate_logistics','415/565',log_num||'/'||log_den,IFF(log_num=415 AND log_den=565,'PASS','FAIL') FROM actual
+UNION ALL SELECT 'aggregate_planning','513/555',plan_num||'/'||plan_den,IFF(plan_num=513 AND plan_den=555,'PASS','FAIL') FROM actual;
 
--- ============================================================
--- 12. Load-history status
--- ============================================================
-SELECT
-    TABLE_NAME AS check_name,
-    STATUS AS actual_value,
-    'LOADED' AS expected_value,
-    CASE WHEN STATUS = 'LOADED' THEN 'PASS' ELSE 'INFO' END AS status
-FROM TABLE(INFORMATION_SCHEMA.COPY_HISTORY(
-    TABLE_NAME => 'SRC_ERP_PURCHASE_ORDER_LINES',
-    START_TIME => DATEADD(HOUR, -24, CURRENT_TIMESTAMP())
-));
+WITH edge_checks AS (
+ SELECT 'po5009_future_date' check_name,COUNT_IF(original_requested_delivery_date='2026-08-20') actual FROM SRC_ERP_PURCHASE_ORDER_LINES WHERE po_number='PO-5009'
+ UNION ALL SELECT 'po5009_no_shipment',IFF(COUNT(*)=0,1,0) FROM SRC_LOGISTICS_SHIPMENT_LINES WHERE po_number='PO-5009'
+ UNION ALL SELECT 'po5010_canceled_zero',COUNT_IF(line_status='CANCELED' AND ordered_quantity='0') FROM SRC_ERP_PURCHASE_ORDER_LINES WHERE po_number='PO-5010'
+ UNION ALL SELECT 'po5010_void_zero_shipment',COUNT_IF(line_status='VOID' AND shipped_quantity='0') FROM SRC_LOGISTICS_SHIPMENT_LINES WHERE po_number='PO-5010'
+ UNION ALL SELECT 'po5010_no_receipt',IFF(COUNT(*)=0,1,0) FROM SRC_LOGISTICS_RECEIPTS r JOIN SRC_LOGISTICS_SHIPMENT_LINES sl ON sl.shipment_id=r.shipment_id AND sl.shipment_line_number=r.shipment_line_number WHERE sl.po_number='PO-5010'
+ UNION ALL SELECT 'po5011_missing_original_po_date',COUNT_IF(original_requested_delivery_date IS NULL AND revised_requested_delivery_date='2026-08-14') FROM SRC_ERP_PURCHASE_ORDER_LINES WHERE po_number='PO-5011'
+ UNION ALL SELECT 'po5011_missing_original_carrier_date',COUNT_IF(original_carrier_commitment_date IS NULL AND revised_carrier_commitment_date='2026-08-14') FROM SRC_LOGISTICS_SHIPMENT_LINES WHERE po_number='PO-5011'
+ UNION ALL SELECT 'po5011_received_accepted_25',COUNT_IF(r.physical_received_quantity='25' AND i.accepted_quantity='25') FROM SRC_LOGISTICS_SHIPMENT_LINES sl JOIN SRC_LOGISTICS_RECEIPTS r ON r.shipment_id=sl.shipment_id AND r.shipment_line_number=sl.shipment_line_number JOIN SRC_QUALITY_INSPECTIONS i ON i.receipt_id=r.receipt_id WHERE sl.po_number='PO-5011'
+ UNION ALL SELECT 'po5012_invalid_ordered',COUNT_IF(ordered_quantity='NOT_A_NUMBER') FROM SRC_ERP_PURCHASE_ORDER_LINES WHERE po_number='PO-5012'
+ UNION ALL SELECT 'po5012_invalid_shipped',COUNT_IF(shipped_quantity='NOT_A_NUMBER') FROM SRC_LOGISTICS_SHIPMENT_LINES WHERE po_number='PO-5012'
+ UNION ALL SELECT 'po5012_no_receipt',IFF(COUNT(*)=0,1,0) FROM SRC_LOGISTICS_RECEIPTS r JOIN SRC_LOGISTICS_SHIPMENT_LINES sl ON sl.shipment_id=r.shipment_id AND sl.shipment_line_number=r.shipment_line_number WHERE sl.po_number='PO-5012'
+ UNION ALL SELECT 'po5013_order_box',COUNT_IF(order_uom='BOX' AND ordered_quantity='10') FROM SRC_ERP_PURCHASE_ORDER_LINES WHERE po_number='PO-5013'
+ UNION ALL SELECT 'po5013_shipment_box',COUNT_IF(shipment_uom='BOX' AND shipped_quantity='10') FROM SRC_LOGISTICS_SHIPMENT_LINES WHERE po_number='PO-5013'
+ UNION ALL SELECT 'po5013_receipt_box',COUNT_IF(receipt_uom='BOX' AND physical_received_quantity='10') FROM SRC_LOGISTICS_RECEIPTS WHERE receipt_id='R-8014'
+ UNION ALL SELECT 'po5013_inspection_box',COUNT_IF(inspection_uom='BOX' AND accepted_quantity='10') FROM SRC_QUALITY_INSPECTIONS WHERE inspection_id='INS-013'
+ UNION ALL SELECT 'planning_canceled_zero',COUNT_IF(requirement_status='CANCELED' AND required_quantity='0') FROM SRC_PLANNING_REQUIREMENTS
+ UNION ALL SELECT 'planning_missing_date',COUNT_IF(production_need_date IS NULL) FROM SRC_PLANNING_REQUIREMENTS
+ UNION ALL SELECT 'planning_invalid_quantity',COUNT_IF(required_quantity='NOT_A_NUMBER' AND usable_quantity_available_by_need_date='NOT_A_NUMBER') FROM SRC_PLANNING_REQUIREMENTS
+ UNION ALL SELECT 'planning_box',COUNT_IF(requirement_uom='BOX') FROM SRC_PLANNING_REQUIREMENTS
+ UNION ALL SELECT 'approved_persona_set',IFF(COUNT(*)=5 AND COUNT_IF((snowflake_user_name='PRIYA_LOGISTICS' AND default_persona='LOGISTICS' AND default_plant_scope='PLT-01' AND can_approve_metrics='FALSE') OR (snowflake_user_name='ARUN_PLANNING' AND default_persona='PLANNING' AND default_plant_scope='PLT-01' AND can_approve_metrics='FALSE') OR (snowflake_user_name='NEHA_PROCUREMENT' AND default_persona='PROCUREMENT' AND default_plant_scope='ALL' AND can_approve_metrics='FALSE') OR (snowflake_user_name='RAVI_STEWARD' AND default_persona='DATA_STEWARD' AND default_plant_scope='ALL' AND can_approve_metrics='TRUE') OR (snowflake_user_name='MAYA_OPERATIONS' AND default_persona='OPERATIONS_LEADER' AND default_plant_scope='ALL' AND can_approve_metrics='FALSE'))=5,1,0) FROM SRC_IDENTITY_PERSONA_MAP
+ UNION ALL SELECT 'supplier_code_mapping_set',IFF(COUNT(*)=4 AND COUNT_IF((supplier_id='S-101' AND erp_supplier_code='BW-ERP-01' AND logistics_supplier_code='BATWRK-LOG') OR (supplier_id='S-102' AND erp_supplier_code='PC-ERP-02' AND logistics_supplier_code='PWRCL-LOG') OR (supplier_id='S-103' AND erp_supplier_code='VE-ERP-03' AND logistics_supplier_code='VOLTEDGE-LOG') OR (supplier_id='S-199' AND erp_supplier_code='LBC-ERP-99' AND logistics_supplier_code='LEGACY-LOG'))=4,1,0) FROM SRC_SUPPLIER_MASTER
+)
+SELECT check_name,'1',TO_VARCHAR(actual),IFF(actual=1,'PASS','FAIL') FROM edge_checks ORDER BY check_name;
 
--- ============================================================
--- 13. Unexpected objects (no Part 4 objects outside RAW)
--- ============================================================
-SELECT 'unexpected_objects_outside_raw' AS check_name, 0 AS expected_value, COUNT(*) AS actual_value,
-    CASE WHEN COUNT(*) = 0 THEN 'PASS' ELSE 'FAIL' END AS status
-FROM INFORMATION_SCHEMA.TABLES
-WHERE TABLE_NAME LIKE 'SRC_%' AND TABLE_SCHEMA != 'RAW';
+SELECT table_name,file_name,status,row_count,row_parsed,error_count,first_error_message,last_load_time
+FROM CHAINPROOF.INFORMATION_SCHEMA.LOAD_HISTORY
+WHERE schema_name='RAW' AND table_name IN (SELECT table_name FROM PART4_EXPECTED_COUNTS)
+ORDER BY last_load_time DESC,table_name;

@@ -1,2 +1,2 @@
-plant_id,plant_name,city,state_region,country,timezone,status,planning_plant_code,logistics_plant_code
+plant_id,plant_name,city_name,state_region,country_code,time_zone,plant_status,planning_plant_code,logistics_plant_code
 PLT-01,Pune Plant,Pune,Maharashtra,IN,Asia/Kolkata,ACTIVE,PUNE_MFG,PNQ_RECEIVING

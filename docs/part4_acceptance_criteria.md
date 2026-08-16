@@ -96,13 +96,13 @@ exists.
 
 - [x] PART4_CSV_FORMAT created with CREATE OR REPLACE.
 - [x] PART4_SOURCE_STAGE created with CREATE STAGE IF NOT EXISTS.
-- [x] Files uploaded to /v1/ path.
-- [x] 12 SRC_ tables in CHAINPROOF.RAW, created with CREATE TABLE IF NOT
-      EXISTS (with one-time DROP TABLE IF EXISTS for the prior draft
-      tables in this corrected pass).
-- [ ] **[RUNTIME]** All 12 exact staged files confirmed present via
+- [x] The loader targets the controlled `/v1/` stage path.
+- [x] 12 SRC_ tables in CHAINPROOF.RAW, created with `CREATE TABLE IF NOT
+      EXISTS`; any one-time removal of unapproved draft tables is isolated in
+      `snowflake/09_part4_reset_draft_tables.sql` and requires an explicit flag.
+- [x] **[RUNTIME]** All 12 exact staged files confirmed present via
       `LIST @PART4_SOURCE_STAGE/v1/` after an actual upload.
-- [ ] **[RUNTIME]** No tables outside CHAINPROOF.RAW confirmed via
+- [x] **[RUNTIME]** No tables outside CHAINPROOF.RAW confirmed via
       INFORMATION_SCHEMA after an actual run.
 
 ### Load Behavior
@@ -111,16 +111,18 @@ exists.
 - [x] FORCE = TRUE in every COPY INTO.
 - [x] Every COPY INTO has an explicit target-column list.
 - [x] No data cleaning/casting/trimming during load.
-- [ ] **[RUNTIME]** Idempotent: second run = same 12 tables, 110 rows, no
-      duplicates (confirmed by an actual second execution).
+- [x] **[RUNTIME]** `scripts/verify_part4_end_to_end.sh` completes both full
+      deployments; the second run leaves the same 12 tables and exactly 110
+      rows without duplicate accumulation.
 - [x] Script executes tests/part4_raw_data_tests.sql.
-- [x] Tests use named exceptions with RAISE for fail-fast (non-zero exit on
-      failure).
+- [x] Tests use named exceptions with `RAISE` for fail-fast behavior and
+      calculate scenario and aggregate results from loaded rows rather than
+      assigning expected numerators as constants.
 
 ### Role and Security
 
 - [x] All SQL uses GRIZZLY03_LEARNER_RL (not the database-creation role).
-- [x] No Python dependencies.
+- [x] No external Python packages; local CSV validation uses only Python 3's standard library.
 - [x] No credentials in any file.
 - [x] No package installations.
 
@@ -130,23 +132,23 @@ exists.
 - [x] Logistics: 415 / 565 = 0.7345132743.
 - [x] Planning: 513 / 555 = 0.9243243243.
 - [x] All relationship checks (PO → PO line → shipment line → receipt →
-      inspection) are traceable via explicit foreign keys in every file.
+      inspection) are traceable through explicit relationship key columns in the source files.
 - [x] All 13 scenarios and all required edge cases are present with exact
       values matching the approved matrix.
 
 ### Runtime Verification (must remain unchecked until actual Snowflake evidence exists)
 
-- [ ] **[RUNTIME]** `scripts/load_part4_raw.sh` completes successfully on a
+- [x] **[RUNTIME]** `scripts/load_part4_raw.sh` completes successfully on a
       first run against a real Snowflake account.
-- [ ] **[RUNTIME]** `scripts/load_part4_raw.sh` completes successfully on a
+- [x] **[RUNTIME]** `scripts/load_part4_raw.sh` completes successfully on a
       second run with no duplicate accumulation (idempotency confirmed).
-- [ ] **[RUNTIME]** All fail-fast tests in
+- [x] **[RUNTIME]** All fail-fast tests in
       `tests/part4_raw_data_tests.sql` pass (no RAISE triggered) against
       real loaded data.
-- [ ] **[RUNTIME]** All PASS statuses confirmed in
+- [x] **[RUNTIME]** All PASS statuses confirmed in
       `snowflake/13_part4_raw_validation.sql` output against real loaded
       data.
-- [ ] **[RUNTIME]** Aggregate ratio-of-sums results confirmed against real
+- [x] **[RUNTIME]** Aggregate ratio-of-sums results confirmed against real
       loaded data (not just the static CSV-derived arithmetic above).
 
 ---

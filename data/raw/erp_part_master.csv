@@ -1,2 +1,2 @@
-part_id,part_name,category,base_unit_of_measure,part_status,planning_part_code,logistics_part_code
+part_id,part_name,part_category,base_uom,part_status,planning_part_code,logistics_part_code
 P-2001,Laptop Battery 65W,BATTERY,EA,ACTIVE,BAT-65W-PLAN,BAT65-LG

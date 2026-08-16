@@ -1,12 +1,4 @@
--- Part 4: Truncate and load CSV data from stage into RAW tables.
--- Every COPY INTO has an explicit target-column list and uses
--- METADATA$ virtual columns for ingestion traceability.
--- FORCE = TRUE ensures reload even if files were previously loaded.
--- ON_ERROR = ABORT_STATEMENT stops on any row error.
--- Batch ID: PART4_SYNTHETIC_V1
--- loaded_at populated from METADATA$START_SCAN_TIME.
--- No casting, trimming, normalizing, or repairing of business fields.
-
+-- Part 4: deterministic truncate-and-load from the internal stage.
 USE ROLE GRIZZLY03_LEARNER_RL;
 USE WAREHOUSE GRIZZLY03_WH;
 USE DATABASE CHAINPROOF;
@@ -30,7 +22,13 @@ COPY INTO CHAINPROOF.RAW.SRC_SUPPLIER_MASTER (
 )
 FROM (
     SELECT
-        $1, $2, $3, $4, $5, $6, $7,
+        $1,
+        $2,
+        $3,
+        $4,
+        $5,
+        $6,
+        $7,
         'PART4_SYNTHETIC_V1',
         METADATA$FILENAME,
         METADATA$FILE_ROW_NUMBER,
@@ -39,9 +37,7 @@ FROM (
         METADATA$START_SCAN_TIME
     FROM @CHAINPROOF.RAW.PART4_SOURCE_STAGE/v1/supplier_master.csv
 )
-FILE_FORMAT = (
-    FORMAT_NAME = CHAINPROOF.RAW.PART4_CSV_FORMAT
-)
+FILE_FORMAT = (FORMAT_NAME = CHAINPROOF.RAW.PART4_CSV_FORMAT)
 ON_ERROR = ABORT_STATEMENT
 FORCE = TRUE;
 
@@ -49,8 +45,8 @@ TRUNCATE TABLE SRC_ERP_PART_MASTER;
 COPY INTO CHAINPROOF.RAW.SRC_ERP_PART_MASTER (
     part_id,
     part_name,
-    category,
-    base_unit_of_measure,
+    part_category,
+    base_uom,
     part_status,
     planning_part_code,
     logistics_part_code,
@@ -63,7 +59,13 @@ COPY INTO CHAINPROOF.RAW.SRC_ERP_PART_MASTER (
 )
 FROM (
     SELECT
-        $1, $2, $3, $4, $5, $6, $7,
+        $1,
+        $2,
+        $3,
+        $4,
+        $5,
+        $6,
+        $7,
         'PART4_SYNTHETIC_V1',
         METADATA$FILENAME,
         METADATA$FILE_ROW_NUMBER,
@@ -72,9 +74,7 @@ FROM (
         METADATA$START_SCAN_TIME
     FROM @CHAINPROOF.RAW.PART4_SOURCE_STAGE/v1/erp_part_master.csv
 )
-FILE_FORMAT = (
-    FORMAT_NAME = CHAINPROOF.RAW.PART4_CSV_FORMAT
-)
+FILE_FORMAT = (FORMAT_NAME = CHAINPROOF.RAW.PART4_CSV_FORMAT)
 ON_ERROR = ABORT_STATEMENT
 FORCE = TRUE;
 
@@ -82,11 +82,11 @@ TRUNCATE TABLE SRC_ERP_PLANT_MASTER;
 COPY INTO CHAINPROOF.RAW.SRC_ERP_PLANT_MASTER (
     plant_id,
     plant_name,
-    city,
+    city_name,
     state_region,
-    country,
-    timezone,
-    status,
+    country_code,
+    time_zone,
+    plant_status,
     planning_plant_code,
     logistics_plant_code,
     load_batch_id,
@@ -98,7 +98,15 @@ COPY INTO CHAINPROOF.RAW.SRC_ERP_PLANT_MASTER (
 )
 FROM (
     SELECT
-        $1, $2, $3, $4, $5, $6, $7, $8, $9,
+        $1,
+        $2,
+        $3,
+        $4,
+        $5,
+        $6,
+        $7,
+        $8,
+        $9,
         'PART4_SYNTHETIC_V1',
         METADATA$FILENAME,
         METADATA$FILE_ROW_NUMBER,
@@ -107,9 +115,7 @@ FROM (
         METADATA$START_SCAN_TIME
     FROM @CHAINPROOF.RAW.PART4_SOURCE_STAGE/v1/erp_plant_master.csv
 )
-FILE_FORMAT = (
-    FORMAT_NAME = CHAINPROOF.RAW.PART4_CSV_FORMAT
-)
+FILE_FORMAT = (FORMAT_NAME = CHAINPROOF.RAW.PART4_CSV_FORMAT)
 ON_ERROR = ABORT_STATEMENT
 FORCE = TRUE;
 
@@ -118,7 +124,7 @@ COPY INTO CHAINPROOF.RAW.SRC_LOGISTICS_CARRIER_MASTER (
     carrier_id,
     carrier_name,
     transport_mode,
-    status,
+    carrier_status,
     load_batch_id,
     source_file_name,
     source_file_row_number,
@@ -128,7 +134,10 @@ COPY INTO CHAINPROOF.RAW.SRC_LOGISTICS_CARRIER_MASTER (
 )
 FROM (
     SELECT
-        $1, $2, $3, $4,
+        $1,
+        $2,
+        $3,
+        $4,
         'PART4_SYNTHETIC_V1',
         METADATA$FILENAME,
         METADATA$FILE_ROW_NUMBER,
@@ -137,9 +146,7 @@ FROM (
         METADATA$START_SCAN_TIME
     FROM @CHAINPROOF.RAW.PART4_SOURCE_STAGE/v1/logistics_carrier_master.csv
 )
-FILE_FORMAT = (
-    FORMAT_NAME = CHAINPROOF.RAW.PART4_CSV_FORMAT
-)
+FILE_FORMAT = (FORMAT_NAME = CHAINPROOF.RAW.PART4_CSV_FORMAT)
 ON_ERROR = ABORT_STATEMENT
 FORCE = TRUE;
 
@@ -161,7 +168,13 @@ COPY INTO CHAINPROOF.RAW.SRC_ERP_PURCHASE_ORDERS (
 )
 FROM (
     SELECT
-        $1, $2, $3, $4, $5, $6, $7,
+        $1,
+        $2,
+        $3,
+        $4,
+        $5,
+        $6,
+        $7,
         'PART4_SYNTHETIC_V1',
         METADATA$FILENAME,
         METADATA$FILE_ROW_NUMBER,
@@ -170,9 +183,7 @@ FROM (
         METADATA$START_SCAN_TIME
     FROM @CHAINPROOF.RAW.PART4_SOURCE_STAGE/v1/erp_purchase_orders.csv
 )
-FILE_FORMAT = (
-    FORMAT_NAME = CHAINPROOF.RAW.PART4_CSV_FORMAT
-)
+FILE_FORMAT = (FORMAT_NAME = CHAINPROOF.RAW.PART4_CSV_FORMAT)
 ON_ERROR = ABORT_STATEMENT
 FORCE = TRUE;
 
@@ -197,7 +208,16 @@ COPY INTO CHAINPROOF.RAW.SRC_ERP_PURCHASE_ORDER_LINES (
 )
 FROM (
     SELECT
-        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
+        $1,
+        $2,
+        $3,
+        $4,
+        $5,
+        $6,
+        $7,
+        $8,
+        $9,
+        $10,
         'PART4_SYNTHETIC_V1',
         METADATA$FILENAME,
         METADATA$FILE_ROW_NUMBER,
@@ -206,9 +226,7 @@ FROM (
         METADATA$START_SCAN_TIME
     FROM @CHAINPROOF.RAW.PART4_SOURCE_STAGE/v1/erp_purchase_order_lines.csv
 )
-FILE_FORMAT = (
-    FORMAT_NAME = CHAINPROOF.RAW.PART4_CSV_FORMAT
-)
+FILE_FORMAT = (FORMAT_NAME = CHAINPROOF.RAW.PART4_CSV_FORMAT)
 ON_ERROR = ABORT_STATEMENT
 FORCE = TRUE;
 
@@ -231,7 +249,14 @@ COPY INTO CHAINPROOF.RAW.SRC_LOGISTICS_SHIPMENTS (
 )
 FROM (
     SELECT
-        $1, $2, $3, $4, $5, $6, $7, $8,
+        $1,
+        $2,
+        $3,
+        $4,
+        $5,
+        $6,
+        $7,
+        $8,
         'PART4_SYNTHETIC_V1',
         METADATA$FILENAME,
         METADATA$FILE_ROW_NUMBER,
@@ -240,9 +265,7 @@ FROM (
         METADATA$START_SCAN_TIME
     FROM @CHAINPROOF.RAW.PART4_SOURCE_STAGE/v1/logistics_shipments.csv
 )
-FILE_FORMAT = (
-    FORMAT_NAME = CHAINPROOF.RAW.PART4_CSV_FORMAT
-)
+FILE_FORMAT = (FORMAT_NAME = CHAINPROOF.RAW.PART4_CSV_FORMAT)
 ON_ERROR = ABORT_STATEMENT
 FORCE = TRUE;
 
@@ -267,7 +290,16 @@ COPY INTO CHAINPROOF.RAW.SRC_LOGISTICS_SHIPMENT_LINES (
 )
 FROM (
     SELECT
-        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
+        $1,
+        $2,
+        $3,
+        $4,
+        $5,
+        $6,
+        $7,
+        $8,
+        $9,
+        $10,
         'PART4_SYNTHETIC_V1',
         METADATA$FILENAME,
         METADATA$FILE_ROW_NUMBER,
@@ -276,9 +308,7 @@ FROM (
         METADATA$START_SCAN_TIME
     FROM @CHAINPROOF.RAW.PART4_SOURCE_STAGE/v1/logistics_shipment_lines.csv
 )
-FILE_FORMAT = (
-    FORMAT_NAME = CHAINPROOF.RAW.PART4_CSV_FORMAT
-)
+FILE_FORMAT = (FORMAT_NAME = CHAINPROOF.RAW.PART4_CSV_FORMAT)
 ON_ERROR = ABORT_STATEMENT
 FORCE = TRUE;
 
@@ -302,7 +332,15 @@ COPY INTO CHAINPROOF.RAW.SRC_LOGISTICS_RECEIPTS (
 )
 FROM (
     SELECT
-        $1, $2, $3, $4, $5, $6, $7, $8, $9,
+        $1,
+        $2,
+        $3,
+        $4,
+        $5,
+        $6,
+        $7,
+        $8,
+        $9,
         'PART4_SYNTHETIC_V1',
         METADATA$FILENAME,
         METADATA$FILE_ROW_NUMBER,
@@ -311,9 +349,7 @@ FROM (
         METADATA$START_SCAN_TIME
     FROM @CHAINPROOF.RAW.PART4_SOURCE_STAGE/v1/logistics_receipts.csv
 )
-FILE_FORMAT = (
-    FORMAT_NAME = CHAINPROOF.RAW.PART4_CSV_FORMAT
-)
+FILE_FORMAT = (FORMAT_NAME = CHAINPROOF.RAW.PART4_CSV_FORMAT)
 ON_ERROR = ABORT_STATEMENT
 FORCE = TRUE;
 
@@ -338,7 +374,16 @@ COPY INTO CHAINPROOF.RAW.SRC_QUALITY_INSPECTIONS (
 )
 FROM (
     SELECT
-        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
+        $1,
+        $2,
+        $3,
+        $4,
+        $5,
+        $6,
+        $7,
+        $8,
+        $9,
+        $10,
         'PART4_SYNTHETIC_V1',
         METADATA$FILENAME,
         METADATA$FILE_ROW_NUMBER,
@@ -347,9 +392,7 @@ FROM (
         METADATA$START_SCAN_TIME
     FROM @CHAINPROOF.RAW.PART4_SOURCE_STAGE/v1/quality_inspections.csv
 )
-FILE_FORMAT = (
-    FORMAT_NAME = CHAINPROOF.RAW.PART4_CSV_FORMAT
-)
+FILE_FORMAT = (FORMAT_NAME = CHAINPROOF.RAW.PART4_CSV_FORMAT)
 ON_ERROR = ABORT_STATEMENT
 FORCE = TRUE;
 
@@ -374,7 +417,16 @@ COPY INTO CHAINPROOF.RAW.SRC_PLANNING_REQUIREMENTS (
 )
 FROM (
     SELECT
-        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
+        $1,
+        $2,
+        $3,
+        $4,
+        $5,
+        $6,
+        $7,
+        $8,
+        $9,
+        $10,
         'PART4_SYNTHETIC_V1',
         METADATA$FILENAME,
         METADATA$FILE_ROW_NUMBER,
@@ -383,9 +435,7 @@ FROM (
         METADATA$START_SCAN_TIME
     FROM @CHAINPROOF.RAW.PART4_SOURCE_STAGE/v1/planning_requirements.csv
 )
-FILE_FORMAT = (
-    FORMAT_NAME = CHAINPROOF.RAW.PART4_CSV_FORMAT
-)
+FILE_FORMAT = (FORMAT_NAME = CHAINPROOF.RAW.PART4_CSV_FORMAT)
 ON_ERROR = ABORT_STATEMENT
 FORCE = TRUE;
 
@@ -408,7 +458,14 @@ COPY INTO CHAINPROOF.RAW.SRC_IDENTITY_PERSONA_MAP (
 )
 FROM (
     SELECT
-        $1, $2, $3, $4, $5, $6, $7, $8,
+        $1,
+        $2,
+        $3,
+        $4,
+        $5,
+        $6,
+        $7,
+        $8,
         'PART4_SYNTHETIC_V1',
         METADATA$FILENAME,
         METADATA$FILE_ROW_NUMBER,
@@ -417,8 +474,6 @@ FROM (
         METADATA$START_SCAN_TIME
     FROM @CHAINPROOF.RAW.PART4_SOURCE_STAGE/v1/identity_persona_map.csv
 )
-FILE_FORMAT = (
-    FORMAT_NAME = CHAINPROOF.RAW.PART4_CSV_FORMAT
-)
+FILE_FORMAT = (FORMAT_NAME = CHAINPROOF.RAW.PART4_CSV_FORMAT)
 ON_ERROR = ABORT_STATEMENT
 FORCE = TRUE;

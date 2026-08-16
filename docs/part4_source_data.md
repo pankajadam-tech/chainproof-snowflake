@@ -133,7 +133,7 @@ requirement_uom = BOX without conversion (PO-5013).
 | Metric | Numerator | Denominator | Result |
 |--------|-----------|-------------|--------|
 | Procurement | 288 | 555 | 0.5189189189 |
-| Enterprise (candidate) | 288 | 555 | 0.5189189189 |
+| Enterprise | 288 | 555 | 0.5189189189 |
 | Planning | 513 | 555 | 0.9243243243 |
 | Logistics | 415 | 565 | 0.7345132743 |
 
@@ -191,35 +191,36 @@ time, hence TIMESTAMP_LTZ), which differs from `source_file_last_modified`
 
 Files are uploaded to `@PART4_SOURCE_STAGE/v1/`.
 
-Because the first corrected deployment replaces 12 previously-created draft
-tables whose column structure predates this approved contract,
-`snowflake/11_part4_raw_tables.sql` includes one-time `DROP TABLE IF EXISTS`
-statements limited to exactly these 12 Part 4 tables, immediately followed
-by the corrected `CREATE TABLE IF NOT EXISTS` statements. After this
-corrected design is approved, subsequent reruns only need `TRUNCATE TABLE`
-(in the load step); the `CREATE TABLE IF NOT EXISTS` statements become
-no-ops and the tables are never dropped again as part of normal operation.
+A separate one-time script, `snowflake/09_part4_reset_draft_tables.sql`,
+removes only the 12 unapproved draft Part 4 tables when
+`PART4_RESET_DRAFT_TABLES=1` is explicitly supplied. The normal loader never
+drops tables. It uses `CREATE TABLE IF NOT EXISTS`, followed by controlled
+`TRUNCATE TABLE` statements in the load step.
 
 ## Load Process
 
 `scripts/load_part4_raw.sh` orchestrates:
 
-1. Local CSV preflight (no Snowflake connection) — verifies exact
-   filenames, exact headers, exact row counts, exact column counts, exactly
-   110 total rows, and required sentinel values.
-2. Creates file format (CREATE OR REPLACE) and stage (IF NOT EXISTS).
-3. Removes any stale files under `@PART4_SOURCE_STAGE/v1/` and re-uploads
-   all 12 CSVs with `--no-auto-compress`.
-4. Creates all 12 tables (drop-then-create for this corrected pass; IF NOT
-   EXISTS thereafter).
-5. TRUNCATE + COPY INTO with explicit target-column lists, `FORCE = TRUE`,
-   `ON_ERROR = ABORT_STATEMENT`, and METADATA$ columns.
-6. Runs the readable validation queries (`snowflake/13_part4_raw_validation.sql`).
-7. Runs the fail-fast tests (`tests/part4_raw_data_tests.sql`, RAISE on
-   failure, `--enhanced-exit-codes`).
+1. A Python 3 standard-library preflight validates exact filenames,
+   headers, row widths, row counts, relationships, inspection arithmetic,
+   all eight metric scenarios, aggregate ratio-of-sums, and edge cases before
+   Snowflake is modified. This avoids Bash 4-only features on macOS.
+2. Creates the file format (`CREATE OR REPLACE`) and stage (`IF NOT EXISTS`).
+3. Optionally runs the one-time draft-table reset only when
+   `PART4_RESET_DRAFT_TABLES=1` is explicitly supplied.
+4. Ensures all 12 tables exist with `CREATE TABLE IF NOT EXISTS`.
+5. Removes stale CSVs only under `@PART4_SOURCE_STAGE/v1/` and uploads the
+   exact 12 local files with Snowflake SQL `PUT`, using
+   `AUTO_COMPRESS = FALSE` and `OVERWRITE = TRUE`.
+6. Executes `TRUNCATE + COPY INTO` with explicit target columns,
+   `FORCE = TRUE`, `ON_ERROR = ABORT_STATEMENT`, and staged-file metadata.
+7. Runs readable validation and fail-fast tests that calculate results from
+   the loaded rows rather than comparing hard-coded arithmetic constants.
 
-Idempotent: second run produces the same 12 tables, 110 rows, no
-duplication.
+`scripts/verify_part4_end_to_end.sh` performs the complete deployment twice:
+the first pass may reset unapproved draft tables, while the second pass is a
+normal rerun. Both passes must finish with 12 staged files, 12 RAW tables,
+110 rows, and all tests passing.
 
 ## PO-5001 Trace
 
@@ -235,4 +236,4 @@ duplication.
 | Receipt | R-8002 | qty=10, date=2026-08-11 |
 | Inspection | INS-001/R-8001 | inspected=90, accepted=85, rejected=5, damaged=5 |
 | Inspection | INS-002/R-8002 | inspected=10, accepted=10, rejected=0, damaged=0 |
-| Planning | PLN-001 | required=100, available=95 |
+| Planning | PLN-5001 | required=100, available=95 |

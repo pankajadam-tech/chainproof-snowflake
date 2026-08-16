@@ -3,31 +3,12 @@
 -- Ingestion metadata columns use Snowflake-native metadata types with NOT NULL
 -- where every loaded row must carry a value.
 --
--- This corrected version replaces the 12 unapproved draft tables created by
--- the earlier (rejected) Part 4 attempt, whose column structure does not
--- match the approved CSV contracts. The DROP statements are limited to
--- exactly these 12 Part 4 draft tables and run once before the corrected
--- CREATE TABLE IF NOT EXISTS statements. After this corrected design is
--- approved, subsequent reruns only need TRUNCATE (done in the load step)
--- and these CREATE TABLE IF NOT EXISTS statements become no-ops.
 
 USE ROLE GRIZZLY03_LEARNER_RL;
 USE WAREHOUSE GRIZZLY03_WH;
 USE DATABASE CHAINPROOF;
 USE SCHEMA CHAINPROOF.RAW;
 
-DROP TABLE IF EXISTS SRC_SUPPLIER_MASTER;
-DROP TABLE IF EXISTS SRC_ERP_PART_MASTER;
-DROP TABLE IF EXISTS SRC_ERP_PLANT_MASTER;
-DROP TABLE IF EXISTS SRC_LOGISTICS_CARRIER_MASTER;
-DROP TABLE IF EXISTS SRC_ERP_PURCHASE_ORDERS;
-DROP TABLE IF EXISTS SRC_ERP_PURCHASE_ORDER_LINES;
-DROP TABLE IF EXISTS SRC_LOGISTICS_SHIPMENTS;
-DROP TABLE IF EXISTS SRC_LOGISTICS_SHIPMENT_LINES;
-DROP TABLE IF EXISTS SRC_LOGISTICS_RECEIPTS;
-DROP TABLE IF EXISTS SRC_QUALITY_INSPECTIONS;
-DROP TABLE IF EXISTS SRC_PLANNING_REQUIREMENTS;
-DROP TABLE IF EXISTS SRC_IDENTITY_PERSONA_MAP;
 
 CREATE TABLE IF NOT EXISTS SRC_SUPPLIER_MASTER (
     supplier_id VARCHAR,
@@ -48,8 +29,8 @@ CREATE TABLE IF NOT EXISTS SRC_SUPPLIER_MASTER (
 CREATE TABLE IF NOT EXISTS SRC_ERP_PART_MASTER (
     part_id VARCHAR,
     part_name VARCHAR,
-    category VARCHAR,
-    base_unit_of_measure VARCHAR,
+    part_category VARCHAR,
+    base_uom VARCHAR,
     part_status VARCHAR,
     planning_part_code VARCHAR,
     logistics_part_code VARCHAR,
@@ -64,11 +45,11 @@ CREATE TABLE IF NOT EXISTS SRC_ERP_PART_MASTER (
 CREATE TABLE IF NOT EXISTS SRC_ERP_PLANT_MASTER (
     plant_id VARCHAR,
     plant_name VARCHAR,
-    city VARCHAR,
+    city_name VARCHAR,
     state_region VARCHAR,
-    country VARCHAR,
-    timezone VARCHAR,
-    status VARCHAR,
+    country_code VARCHAR,
+    time_zone VARCHAR,
+    plant_status VARCHAR,
     planning_plant_code VARCHAR,
     logistics_plant_code VARCHAR,
     load_batch_id VARCHAR NOT NULL,
@@ -83,7 +64,7 @@ CREATE TABLE IF NOT EXISTS SRC_LOGISTICS_CARRIER_MASTER (
     carrier_id VARCHAR,
     carrier_name VARCHAR,
     transport_mode VARCHAR,
-    status VARCHAR,
+    carrier_status VARCHAR,
     load_batch_id VARCHAR NOT NULL,
     source_file_name VARCHAR NOT NULL,
     source_file_row_number NUMBER NOT NULL,
