@@ -3,172 +3,130 @@
 ## Overview
 
 Part 4 creates 12 synthetic source-system CSV files representing data from the
-seven source systems documented in Part 3. The data is loaded into
-`CHAINPROOF.RAW` as all-VARCHAR tables (no type conversion at this stage).
+seven source systems documented in Part 3. Data is loaded into `CHAINPROOF.RAW`
+as all-VARCHAR tables with ingestion metadata for full traceability.
 
-The PO-5001 worked example from Part 3 is embedded in the data and produces
-exactly the approved metric results:
-- Planning Material Availability Rate: 95 / 100 = 95%
-- Procurement Supplier Accepted Fill Rate: 85 / 100 = 85%
-- Logistics On-Time Arrival Quantity Rate: 90 / 100 = 90%
-- Enterprise Supplier Fill Rate: 85 / 100 = 85%
-
-## Design Decisions
+## Design Principles
 
 1. **All columns are VARCHAR** — source systems deliver text. Type conversion
-   (dates, numbers) happens in Part 5 (CORE layer).
-2. **No data cleaning during load** — RAW preserves source fidelity.
-3. **SRC_ prefix** on all table names to distinguish raw source tables.
-4. **CREATE OR REPLACE + TRUNCATE before COPY** ensures idempotent re-runs.
-5. **110 total rows** across 12 tables — enough to validate metrics without
-   unnecessary volume.
-6. **Dates use ISO 8601 strings** (YYYY-MM-DD) as text.
+   happens in Part 5 (CORE layer).
+2. **No data cleaning during load** — RAW preserves source fidelity including
+   invalid values (NOT_A_NUMBER, unresolved BOX unit, missing dates).
+3. **Source-local identifiers** — each system uses its own codes; Part 5 must
+   resolve to canonical IDs.
+4. **Unit-of-measure columns** — every quantity has an associated UOM field.
+5. **Ingestion metadata** — 6 columns on every table for traceability.
+6. **ON_ERROR = ABORT_STATEMENT** — load stops on any row error.
+7. **IF NOT EXISTS** for stage/format; **OR REPLACE** for tables (idempotent).
+8. **110 total rows** across 12 tables with 13 controlled PO scenarios.
 
-## Source Files
+## Row Distribution
 
-### Master Data
+| File | Table | Rows |
+|------|-------|------|
+| supplier_master.csv | SRC_SUPPLIER_MASTER | 4 |
+| erp_part_master.csv | SRC_ERP_PART_MASTER | 1 |
+| erp_plant_master.csv | SRC_ERP_PLANT_MASTER | 1 |
+| logistics_carrier_master.csv | SRC_LOGISTICS_CARRIER_MASTER | 3 |
+| erp_purchase_orders.csv | SRC_ERP_PURCHASE_ORDERS | 13 |
+| erp_purchase_order_lines.csv | SRC_ERP_PURCHASE_ORDER_LINES | 13 |
+| logistics_shipments.csv | SRC_LOGISTICS_SHIPMENTS | 15 |
+| logistics_shipment_lines.csv | SRC_LOGISTICS_SHIPMENT_LINES | 15 |
+| logistics_receipts.csv | SRC_LOGISTICS_RECEIPTS | 14 |
+| quality_inspections.csv | SRC_QUALITY_INSPECTIONS | 13 |
+| planning_requirements.csv | SRC_PLANNING_REQUIREMENTS | 13 |
+| identity_persona_map.csv | SRC_IDENTITY_PERSONA_MAP | 5 |
+| **TOTAL** | | **110** |
 
-| File | Table | Rows | Source System |
-|------|-------|------|---------------|
-| supplier_master.csv | SRC_SUPPLIER_MASTER | 5 | Supplier Master |
-| erp_part_master.csv | SRC_ERP_PART_MASTER | 5 | ERP Master Data |
-| erp_plant_master.csv | SRC_ERP_PLANT_MASTER | 3 | ERP Master Data |
-| logistics_carrier_master.csv | SRC_LOGISTICS_CARRIER_MASTER | 3 | Logistics System |
+## 13 Controlled PO Scenarios
 
-### Transactional Data
+| PO | Scenario | Key Test |
+|----|----------|----------|
+| PO-5001 | Approved example | 95%/85%/90%/85% |
+| PO-5002 | Perfect fulfillment | 100% all metrics |
+| PO-5003 | Late for PO/carrier, available for production | Procurement 0%, Planning ~97% |
+| PO-5004 | Partial receipts | One shipment line, two receipt events |
+| PO-5005 | Over-delivery cap | Accepted > ordered, capped at 100% |
+| PO-5006 | Revised-date trap | Original date governs; revised is context only |
+| PO-5007 | Pending inspection | R-8010 has no inspection row |
+| PO-5008 | Damage + second shipment | Two shipments, high rejection |
+| PO-5009 | Future commitment | Governing date after as-of 2026-08-15 |
+| PO-5010 | Canceled, zero denominator | ordered_quantity=0, returns NULL |
+| PO-5011 | Missing original dates | Data-quality exception |
+| PO-5012 | NOT_A_NUMBER quantity | Invalid numeric value |
+| PO-5013 | Unresolved BOX unit | Cannot convert to base unit EACH |
 
-| File | Table | Rows | Source System |
-|------|-------|------|---------------|
-| erp_purchase_orders.csv | SRC_ERP_PURCHASE_ORDERS | 8 | ERP / Procurement |
-| erp_purchase_order_lines.csv | SRC_ERP_PURCHASE_ORDER_LINES | 15 | ERP / Procurement |
-| logistics_shipments.csv | SRC_LOGISTICS_SHIPMENTS | 10 | Logistics System |
-| logistics_shipment_lines.csv | SRC_LOGISTICS_SHIPMENT_LINES | 15 | Logistics System |
-| logistics_receipts.csv | SRC_LOGISTICS_RECEIPTS | 15 | Logistics System |
-| quality_inspections.csv | SRC_QUALITY_INSPECTIONS | 15 | Quality Inspection |
-| planning_requirements.csv | SRC_PLANNING_REQUIREMENTS | 10 | Planning System |
+## Source-Local Identifier Mapping
 
-### Application Configuration
+Different systems use different codes for the same entities:
 
-| File | Table | Rows | Source System |
-|------|-------|------|---------------|
-| identity_persona_map.csv | SRC_IDENTITY_PERSONA_MAP | 6 | Identity/Persona Mapping |
+| Entity | Canonical (Master) | ERP Code | Logistics Code | Planning Code |
+|--------|-------------------|----------|----------------|---------------|
+| Supplier | S-101 (BatteryWorks) | ERP-BW01 | LOG-BW | — |
+| Part | P-2001 (Laptop Battery) | P-2001 | LGS-BATT | PLAN-BAT-01 |
+| Plant | PLT-01 (Pune Plant) | PLT-01 | WH-PUNE-01 | PLAN-PUNE |
 
-## Column Definitions
+Part 5 must resolve source-local codes back to canonical IDs.
 
-### SRC_SUPPLIER_MASTER
-- `supplier_id` — Business key (e.g., S-101)
-- `supplier_name` — Display name (e.g., BatteryWorks)
-- `location` — City/region
-- `status` — active or inactive
+## Inspection Model
 
-### SRC_ERP_PART_MASTER
-- `part_id` — Business key (e.g., P-2001)
-- `part_name` — Display name (e.g., Laptop Battery)
-- `category` — Part category
-- `base_unit_of_measure` — Agreed unit (e.g., EACH)
+```
+accepted_quantity + rejected_quantity = inspected_quantity
+damaged_quantity <= rejected_quantity
+inspected_quantity <= physical_receipt_quantity
+```
 
-### SRC_ERP_PLANT_MASTER
-- `plant_id` — Business key (e.g., PLT-01)
-- `plant_name` — Display name (e.g., Pune Plant)
-- `location` — City/region
-- `status` — active or inactive
+Damaged is a subtype of rejected. R-8010 (PO-5007) has no inspection row
+(pending inspection — not counted as accepted).
 
-### SRC_LOGISTICS_CARRIER_MASTER
-- `carrier_id` — Business key (e.g., CR-01)
-- `carrier_name` — Display name
-- `mode` — Transport mode (road/sea/air)
-- `status` — active or inactive
+## Ingestion Metadata Columns
 
-### SRC_ERP_PURCHASE_ORDERS
-- `po_number` — Business key (e.g., PO-5001)
-- `supplier_id` — FK to supplier
-- `destination_plant_id` — FK to plant
-- `po_date` — PO creation date (text)
-- `status` — open/closed/cancelled
+Every RAW table includes:
 
-### SRC_ERP_PURCHASE_ORDER_LINES
-- `po_number` + `po_line_number` — Composite business key
-- `part_id` — FK to part
-- `ordered_quantity` — Denominator for Procurement/Enterprise metrics
-- `original_requested_delivery_date` — Governing date for Procurement/Enterprise
-- `revised_requested_delivery_date` — Context only (not used in v1.0 numerator)
-- `destination_plant_id` — FK to plant
-- `unit_price` — Price per unit
-- `line_status` — open/closed/cancelled
+| Column | Source |
+|--------|--------|
+| load_batch_id | Hardcoded 'part4_v1' per batch |
+| source_file_name | METADATA$FILENAME |
+| source_file_row_number | METADATA$FILE_ROW_NUMBER |
+| source_file_content_key | METADATA$FILE_CONTENT_KEY |
+| source_file_last_modified | METADATA$FILE_LAST_MODIFIED |
+| loaded_at | CURRENT_TIMESTAMP() |
 
-### SRC_LOGISTICS_SHIPMENTS
-- `shipment_id` — Business key (e.g., SH-9001)
-- `carrier_id` — FK to carrier
-- `origin_supplier_id` — FK to supplier
-- `destination_plant_id` — FK to plant
-- `ship_date` — Ship date (text)
+## Snowflake Objects
 
-### SRC_LOGISTICS_SHIPMENT_LINES
-- `shipment_id` + `shipment_line_number` — Composite business key
-- `po_number` + `po_line_number` — FK to PO line
-- `part_id` — FK to part
-- `shipped_quantity` — Denominator for Logistics metric
-- `original_carrier_commitment_date` — Governing date for Logistics metric
-- `revised_carrier_commitment_date` — Context only (not used in v1.0 numerator)
+| Object | Type | Creation |
+|--------|------|----------|
+| CHAINPROOF.RAW.PART4_CSV_FORMAT | File Format | IF NOT EXISTS |
+| CHAINPROOF.RAW.PART4_SOURCE_STAGE | Stage | IF NOT EXISTS |
+| 12 SRC_ tables | Table | OR REPLACE |
 
-### SRC_LOGISTICS_RECEIPTS
-- `receipt_id` — Business key (e.g., REC-001)
-- `shipment_id` + `shipment_line_number` — FK to shipment line
-- `physical_receipt_quantity` — What Logistics credits for on-time
-- `receipt_date` — Physical arrival date (used by Procurement/Enterprise timing)
-- `receiving_dock` — Dock location
-
-### SRC_QUALITY_INSPECTIONS
-- `inspection_id` — Business key (e.g., INS-001)
-- `receipt_id` — FK to receipt (one inspection per receipt in MVP)
-- `accepted_quantity` — Usable quantity (numerator input)
-- `rejected_quantity` — Failed inspection
-- `damaged_quantity` — Physically damaged
-- `inspection_date` — Inspection completion date
-- `disposition` — completed/pending
-
-### SRC_PLANNING_REQUIREMENTS
-- `part_id` + `plant_id` + `production_need_date` — Composite business key
-- `required_quantity` — Denominator for Planning metric
-- `usable_quantity_available_by_need_date` — Numerator input for Planning
-- `planning_record_timestamp` — When the planning record was created
-- `requirement_status` — active/inactive
-- `production_plan_reference` — Link to production plan
-
-### SRC_IDENTITY_PERSONA_MAP
-- `user_id` — Business key (application user identifier)
-- `default_persona` — Persona assignment
-- `default_plant_id` — Default plant context
-- `metric_approval_authority` — true/false
-- `display_name` — Human-readable name
+Files are uploaded to `@PART4_SOURCE_STAGE/v1/`.
 
 ## Load Process
 
-The shell script `scripts/load_part4_raw.sh` orchestrates:
+`scripts/load_part4_raw.sh` orchestrates:
 
-1. Creates the internal stage `@CHAINPROOF.RAW.PART4_STAGE`
-2. Uploads all 12 CSV files to the stage
-3. Creates all 12 RAW tables (CREATE OR REPLACE)
-4. Truncates and loads data (TRUNCATE + COPY INTO)
+1. Creates file format + stage (IF NOT EXISTS — non-destructive)
+2. Uploads all 12 CSVs to @PART4_SOURCE_STAGE/v1/ (--overwrite)
+3. Creates all 12 tables (OR REPLACE — resets load history)
+4. COPY INTO with METADATA$ columns (ON_ERROR = ABORT_STATEMENT)
 5. Runs validation queries
+6. Runs fail-fast tests (RAISE on failure)
 
-The process is idempotent — running it twice produces the same 12 tables with
-110 total rows and no duplicate accumulation.
+Idempotent: second run produces same 12 tables, 110 rows, no duplication.
 
 ## PO-5001 Trace
 
-To verify the worked example flows through correctly:
-
-| Entity | Key | Critical Values |
-|--------|-----|-----------------|
-| Supplier | S-101 | BatteryWorks |
-| Part | P-2001 | Laptop Battery |
-| Plant | PLT-01 | Pune Plant |
-| PO Line | PO-5001 / 1 | qty=100, requested=2026-08-08 |
-| Shipment Line | SH-9001 / 1 | qty=90, commitment=2026-08-08 |
-| Shipment Line | SH-9002 / 1 | qty=10, commitment=2026-08-10 |
-| Receipt | REC-001 | qty=90, date=2026-08-08 |
-| Receipt | REC-002 | qty=10, date=2026-08-11 |
-| Inspection | INS-001 | accepted=85, rejected=3, damaged=2 |
-| Inspection | INS-002 | accepted=10, rejected=0, damaged=0 |
-| Planning | P-2001/PLT-01/2026-08-12 | required=100, available=95 |
+| Entity | Key | Values |
+|--------|-----|--------|
+| Supplier | S-101 / ERP-BW01 | BatteryWorks |
+| Part | P-2001 / LGS-BATT / PLAN-BAT-01 | Laptop Battery |
+| Plant | PLT-01 / WH-PUNE-01 / PLAN-PUNE | Pune Plant |
+| PO Line | PO-5001/1 | qty=100, uom=EACH, requested=2026-08-08 |
+| Shipment Line | SH-9001/1 | qty=90, commitment=2026-08-08 |
+| Shipment Line | SH-9002/1 | qty=10, commitment=2026-08-10 |
+| Receipt | R-8001 | qty=90, date=2026-08-08 |
+| Receipt | R-8002 | qty=10, date=2026-08-11 |
+| Inspection | INS-001/R-8001 | inspected=90, accepted=85, rejected=5, damaged=5 |
+| Inspection | INS-002/R-8002 | inspected=10, accepted=10, rejected=0, damaged=0 |
+| Planning | PLAN-BAT-01/PLAN-PUNE/2026-08-12 | required=100, available=95 |

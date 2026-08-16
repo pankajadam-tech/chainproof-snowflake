@@ -1,6 +1,5 @@
-supplier_id,supplier_name,location,status
-S-101,BatteryWorks,Shenzhen,active
-S-102,ChipTech Industries,Taipei,active
-S-103,ScreenCo Ltd,Seoul,active
-S-104,MemoryPlus Corp,Tokyo,active
-S-105,CaseMakers Inc,Dongguan,inactive
+supplier_id,supplier_name,erp_supplier_code,logistics_supplier_code,location,status
+S-101,BatteryWorks,ERP-BW01,LOG-BW,Shenzhen,active
+S-102,PowerCell Ltd,ERP-PC01,LOG-PC,Taipei,active
+S-103,VoltMax Corp,ERP-VM01,LOG-VM,Seoul,active
+S-104,EnergyPro Inc,ERP-EP01,LOG-EP,Tokyo,active

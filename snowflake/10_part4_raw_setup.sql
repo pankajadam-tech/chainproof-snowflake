@@ -1,18 +1,18 @@
--- Part 4: RAW schema setup
--- Run under the learner role for normal development.
+-- Part 4: RAW schema setup — file format and stage
+-- Uses IF NOT EXISTS to preserve stage files across re-runs.
 
 USE ROLE GRIZZLY03_LEARNER_RL;
 USE WAREHOUSE GRIZZLY03_WH;
 USE DATABASE CHAINPROOF;
 USE SCHEMA CHAINPROOF.RAW;
 
--- Create an internal stage for CSV file upload.
--- Using CREATE OR REPLACE for idempotency.
-CREATE OR REPLACE STAGE CHAINPROOF.RAW.PART4_STAGE
-    FILE_FORMAT = (
-        TYPE = CSV
-        FIELD_OPTIONALLY_ENCLOSED_BY = '"'
-        SKIP_HEADER = 1
-        EMPTY_FIELD_AS_NULL = TRUE
-    )
+CREATE FILE FORMAT IF NOT EXISTS CHAINPROOF.RAW.PART4_CSV_FORMAT
+    TYPE = CSV
+    FIELD_OPTIONALLY_ENCLOSED_BY = '"'
+    SKIP_HEADER = 1
+    EMPTY_FIELD_AS_NULL = TRUE
+    COMMENT = 'CSV format for Part 4 source data files';
+
+CREATE STAGE IF NOT EXISTS CHAINPROOF.RAW.PART4_SOURCE_STAGE
+    FILE_FORMAT = CHAINPROOF.RAW.PART4_CSV_FORMAT
     COMMENT = 'Internal stage for Part 4 source CSV uploads';

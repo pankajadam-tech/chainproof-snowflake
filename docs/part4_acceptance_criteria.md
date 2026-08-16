@@ -3,7 +3,7 @@
 ## Purpose
 
 This checklist defines what must be true before Part 4 (Source-System Data) is
-considered complete and before any Part 5 work (CORE layer) may begin.
+complete and before Part 5 (CORE layer) may begin.
 
 ---
 
@@ -12,81 +12,77 @@ considered complete and before any Part 5 work (CORE layer) may begin.
 ### CSV Files
 
 - [ ] 12 CSV files exist in `data/raw/`.
-- [ ] All CSV files use header rows with column names matching the ontology.
-- [ ] Total data rows across all files: exactly 110.
-- [ ] No typed columns — all values are text strings.
-- [ ] Dates use ISO 8601 format (YYYY-MM-DD) as text.
-- [ ] No credentials, tokens, or secrets in any data file.
+- [ ] Row counts: 4+1+1+3+13+13+15+15+14+13+13+5 = 110.
+- [ ] All values are text strings (no typed columns).
+- [ ] Dates use ISO 8601 (YYYY-MM-DD) as text.
+- [ ] UOM columns present: order_uom, shipment_uom, receipt_uom, inspection_uom, requirement_uom.
+- [ ] Source-local identifiers: erp_supplier_code, logistics_supplier_code, planning_part_code, logistics_part_code, planning_plant_code, logistics_plant_code.
+- [ ] No credentials, tokens, or secrets.
 
-### PO-5001 Worked Example
+### 13 Controlled Scenarios
 
-- [ ] PO-5001 line 1: ordered_quantity = 100, requested_date = 2026-08-08.
-- [ ] SH-9001 line 1: shipped = 90, commitment = 2026-08-08, arrived = 2026-08-08.
-- [ ] SH-9002 line 1: shipped = 10, commitment = 2026-08-10, arrived = 2026-08-11.
-- [ ] REC-001: physical_receipt = 90, INS-001: accepted = 85, rejected+damaged = 5.
-- [ ] REC-002: physical_receipt = 10, INS-002: accepted = 10, rejected+damaged = 0.
-- [ ] Planning P-2001/PLT-01/2026-08-12: required = 100, available = 95.
+- [ ] PO-5001: ordered=100, SH-9001 shipped=90 on-time, SH-9002 shipped=10 late, accepted=85+10=95.
+- [ ] PO-5002: perfect fulfillment (100% all metrics).
+- [ ] PO-5003: late for PO/carrier but available for production need date.
+- [ ] PO-5004: partial receipts (one shipment line, two receipt events).
+- [ ] PO-5005: over-delivery cap (accepted > ordered, metric caps at 100%).
+- [ ] PO-5006: revised-date trap (original date governs, revised is context).
+- [ ] PO-5007: pending inspection (R-8010 has NO inspection row).
+- [ ] PO-5008: damage plus second shipment.
+- [ ] PO-5009: future commitment (governing date after as-of 2026-08-15).
+- [ ] PO-5010: canceled, zero denominator (returns NULL).
+- [ ] PO-5011: missing original governing dates (data-quality exception).
+- [ ] PO-5012: NOT_A_NUMBER quantity (invalid numeric, data-quality exception).
+- [ ] PO-5013: unresolved BOX unit (cannot convert to EACH).
 
-### Metric Arithmetic Verification
+### Inspection Model
+
+- [ ] accepted + rejected = inspected for every inspection row.
+- [ ] damaged <= rejected for every inspection row.
+- [ ] inspected <= physical_receipt_quantity for every receipt with inspection.
+- [ ] R-8010 has zero inspection rows (pending).
+
+### Snowflake Objects
+
+- [ ] PART4_CSV_FORMAT created with IF NOT EXISTS.
+- [ ] PART4_SOURCE_STAGE created with IF NOT EXISTS.
+- [ ] Files uploaded to /v1/ path.
+- [ ] 12 SRC_ tables in CHAINPROOF.RAW (CREATE OR REPLACE).
+- [ ] All business columns are VARCHAR.
+- [ ] 6 ingestion metadata columns on every table.
+- [ ] No tables outside CHAINPROOF.RAW.
+
+### Load Behavior
+
+- [ ] ON_ERROR = ABORT_STATEMENT (not CONTINUE).
+- [ ] No data cleaning during load.
+- [ ] Idempotent: second run = same 12 tables, 110 rows, no duplicates.
+- [ ] Script executes tests/part4_raw_data_tests.sql.
+- [ ] Tests use RAISE for fail-fast (non-zero exit on failure).
+
+### Role and Security
+
+- [ ] All SQL uses GRIZZLY03_LEARNER_RL (not database-creation role).
+- [ ] No Python dependencies.
+- [ ] No credentials in any file.
+- [ ] No package installations.
+
+### Metric Arithmetic (from raw data)
 
 - [ ] Planning: MIN(100, 95) / 100 = 95%.
-- [ ] Procurement: 85 / 100 = 85% (only REC-001 qualifies by Aug 8).
+- [ ] Procurement: 85 / 100 = 85% (only R-8001 qualifies by Aug 8).
 - [ ] Logistics: 90 / 100 = 90% (SH-9001 on time, SH-9002 late).
 - [ ] Enterprise: 85 / 100 = 85%.
-
-### RAW Tables
-
-- [ ] 12 SRC_ tables exist in CHAINPROOF.RAW.
-- [ ] All columns are VARCHAR.
-- [ ] No tables exist outside CHAINPROOF.RAW.
-- [ ] Total rows loaded: exactly 110.
-- [ ] Second script execution produces same result (idempotent, no duplicates).
-
-### SQL Files
-
-- [ ] snowflake/10_part4_raw_setup.sql creates the stage.
-- [ ] snowflake/11_part4_raw_tables.sql creates all 12 tables (CREATE OR REPLACE).
-- [ ] snowflake/12_part4_raw_load.sql loads data (TRUNCATE + COPY).
-- [ ] snowflake/13_part4_raw_validation.sql runs validation queries.
-- [ ] All SQL uses GRIZZLY03_LEARNER_RL role (not database-creation role).
-
-### Load Script
-
-- [ ] scripts/load_part4_raw.sh exists and is executable.
-- [ ] Uses `snow sql -f` for SQL execution.
-- [ ] Uses `snow stage copy` for file upload.
-- [ ] No Python dependencies.
-- [ ] Idempotent: second run produces 12 tables, 110 rows.
-
-### Tests
-
-- [ ] tests/part4_raw_data_tests.sql validates table count, row count, and PO-5001 data.
-- [ ] All tests produce PASS results after load.
-
-### Documentation
-
-- [ ] docs/part4_source_data.md describes all 12 sources and column definitions.
-- [ ] docs/part4_acceptance_criteria.md contains this checklist.
-
-### Prohibited Actions (must not have occurred)
-
-- [ ] No tables created outside CHAINPROOF.RAW.
-- [ ] No typed NUMBER/DATE columns in RAW.
-- [ ] No data cleaning during load.
-- [ ] No Python packages installed.
-- [ ] No Part 3 documents modified.
-- [ ] No credentials or secrets in any file.
-- [ ] Database-creation role not used.
 
 ---
 
 ## Part 4 Completion Gate
 
 Part 4 is complete when:
-1. The load script runs successfully (first and second execution).
+1. `scripts/load_part4_raw.sh` runs successfully (first and second execution).
 2. All 12 tables contain exactly 110 total rows.
-3. All test queries return PASS.
+3. All test assertions pass (no RAISE triggered).
 4. This checklist is fully verified.
 
-After completion, PROJECT_STATE.md and README.md may be updated to record
-Part 4 status. Part 5 (Canonical Entity Layer) may then begin.
+After completion, PROJECT_STATE.md and README.md may be updated.
+Part 5 (Canonical Entity Layer) may then begin.

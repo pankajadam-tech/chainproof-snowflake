@@ -1,4 +1,2 @@
-plant_id,plant_name,location,status
-PLT-01,Pune Plant,Pune India,active
-PLT-02,Chennai Plant,Chennai India,active
-PLT-03,Penang Plant,Penang Malaysia,inactive
+plant_id,plant_name,location,status,planning_plant_code,logistics_plant_code
+PLT-01,Pune Plant,Pune India,active,PLAN-PUNE,WH-PUNE-01
