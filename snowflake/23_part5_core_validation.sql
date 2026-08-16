@@ -389,7 +389,7 @@ FROM (
     FROM PRODUCTION_REQUIREMENT WHERE planning_record_id='PLN-5013'
     UNION ALL SELECT 'r8010_inspection_count', '0', TO_VARCHAR(COUNT(*))
     FROM INSPECTION WHERE receipt_id='R-8010'
-    UNION ALL SELECT 'po5007_pending_inspection_quantity', '30', TO_VARCHAR(pending_inspection_received_base)
+    UNION ALL SELECT 'po5007_pending_inspection_quantity', '30', TO_VARCHAR(ROUND(pending_inspection_received_base,0))
     FROM V_PO_LINE_RECEIPT_EVIDENCE WHERE po_number='PO-5007' AND po_line_number=1
 );
 
