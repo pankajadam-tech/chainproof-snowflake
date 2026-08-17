@@ -28,6 +28,7 @@ DECLARE
     persona_failed EXCEPTION (-20810,'Part 8 persona-context policy mismatch');
     scope_failed EXCEPTION (-20811,'Part 8 object found outside APP');
     journey_failed EXCEPTION (-20812,'Part 8 governance journey mismatch');
+    definition_failed EXCEPTION (-20813,'Part 8 definition-change simulation mismatch');
     v_count NUMBER;
 BEGIN
     IF (CURRENT_ROLE()<>'GRIZZLY03_LEARNER_RL'
@@ -70,6 +71,7 @@ BEGIN
             UNION ALL SELECT 'V_GOVERNANCE_TIMELINE', COUNT(*), 3 FROM V_GOVERNANCE_TIMELINE
             UNION ALL SELECT 'V_CALCULATION_EVIDENCE', COUNT(*), 32 FROM V_CALCULATION_EVIDENCE
             UNION ALL SELECT 'V_PERSONA_CONTEXT', COUNT(*), 5 FROM V_PERSONA_CONTEXT
+            UNION ALL SELECT 'V_DEFINITION_CHANGE_SIMULATOR', COUNT(*), 1 FROM V_DEFINITION_CHANGE_SIMULATOR
         ) WHERE actual_rows<>expected_rows
     );
     IF (v_count<>0) THEN RAISE count_failed; END IF;
@@ -152,6 +154,15 @@ BEGIN
            OR UPPER(numerator_description) LIKE '%REVISED%');
     IF (v_count<>0) THEN RAISE evidence_failed; END IF;
 
+    v_count := (SELECT COUNT(*) FROM V_DEFINITION_CHANGE_SIMULATOR
+        WHERE po_number='PO-5006'
+          AND ABS(current_v1_rate-0.0)<0.000000001
+          AND ABS(candidate_revised_date_rate-1.0)<0.000000001
+          AND ABS(rate_change-1.0)<0.000000001
+          AND governance_status='SIMULATION_ONLY'
+          AND impact_status='RESULT_CHANGES');
+    IF (v_count<>1 OR (SELECT COUNT(*) FROM V_DEFINITION_CHANGE_SIMULATOR)<>1) THEN RAISE definition_failed; END IF;
+
     v_count := (SELECT COUNT(*) FROM V_PERSONA_CONTEXT
         WHERE persona_policy<>'Persona controls presentation only; it never changes a governed metric formula.');
     IF (v_count<>0 OR (SELECT COUNT(*) FROM V_PERSONA_CONTEXT)<>5) THEN RAISE persona_failed; END IF;
@@ -165,7 +176,7 @@ BEGIN
         WHERE table_schema<>'APP'
           AND table_name IN (
             'V_CONFLICT_SCANNER','V_METRIC_COMPONENT_COMPARISON','V_IMPACT_SIMULATOR_BASE',
-            'V_GOVERN_PUBLISH_STATUS','V_GOVERNANCE_TIMELINE','V_CALCULATION_EVIDENCE','V_PERSONA_CONTEXT'
+            'V_GOVERN_PUBLISH_STATUS','V_GOVERNANCE_TIMELINE','V_CALCULATION_EVIDENCE','V_PERSONA_CONTEXT','V_DEFINITION_CHANGE_SIMULATOR'
           ));
     IF (v_count<>0) THEN RAISE scope_failed; END IF;
 END;

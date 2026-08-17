@@ -19,6 +19,7 @@ SELECT
     r.po_number,
     r.po_line_number,
     r.planning_record_id,
+    pa.production_plan_id,
     r.metric_as_of_date,
     r.supplier_id,
     r.supplier_name,
@@ -44,7 +45,9 @@ SELECT
     'Planning, Procurement, and Logistics answer different business questions. The approved enterprise interpretation is shown separately.' AS explanation
 FROM CHAINPROOF.SEMANTIC.V_METRIC_RECONCILIATION r
 JOIN CHAINPROOF.GOVERNANCE.METRIC_CONFLICT c
-  ON c.conflict_id = r.conflict_id;
+  ON c.conflict_id = r.conflict_id
+LEFT JOIN CHAINPROOF.SEMANTIC.V_PLANNING_MATERIAL_AVAILABILITY pa
+  ON pa.planning_record_id = r.planning_record_id;
 
 CREATE OR REPLACE VIEW CHAINPROOF.APP.V_METRIC_COMPONENT_COMPARISON AS
 SELECT
@@ -360,3 +363,36 @@ SELECT
     'Persona controls presentation only; it never changes a governed metric formula.' AS persona_policy
 FROM CHAINPROOF.GOVERNANCE.USER_PERSONA_MAP
 WHERE assignment_status = 'ACTIVE';
+
+CREATE OR REPLACE VIEW CHAINPROOF.APP.V_DEFINITION_CHANGE_SIMULATOR AS
+SELECT
+    e.po_number,
+    e.po_line_number,
+    s.supplier_id,
+    s.supplier_name,
+    e.original_requested_delivery_date,
+    e.revised_requested_delivery_date,
+    e.ordered_quantity_base AS ordered_quantity,
+    e.capped_accepted_by_original_po_date_base AS current_v1_credited_quantity,
+    LEAST(e.ordered_quantity_base, e.accepted_by_revised_po_date_base) AS candidate_revised_date_credited_quantity,
+    e.capped_accepted_by_original_po_date_base / NULLIF(e.ordered_quantity_base, 0) AS current_v1_rate,
+    LEAST(e.ordered_quantity_base, e.accepted_by_revised_po_date_base) / NULLIF(e.ordered_quantity_base, 0) AS candidate_revised_date_rate,
+    (LEAST(e.ordered_quantity_base, e.accepted_by_revised_po_date_base)
+      - e.capped_accepted_by_original_po_date_base) / NULLIF(e.ordered_quantity_base, 0) AS rate_change,
+    IFF(
+      e.capped_accepted_by_original_po_date_base
+        <> LEAST(e.ordered_quantity_base, e.accepted_by_revised_po_date_base),
+      'RESULT_CHANGES',
+      'NO_CHANGE'
+    ) AS impact_status,
+    'SIMULATION_ONLY' AS governance_status,
+    'Version 1.0 remains original-date based. The revised-date result is a hypothetical candidate and is not published.' AS simulation_notice
+FROM CHAINPROOF.CORE.V_PO_LINE_RECEIPT_EVIDENCE e
+LEFT JOIN CHAINPROOF.CORE.PURCHASE_ORDER po
+  ON po.po_number = e.po_number
+LEFT JOIN CHAINPROOF.CORE.SUPPLIER s
+  ON s.supplier_id = po.supplier_id
+WHERE e.metric_eligibility_status = 'ELIGIBLE'
+  AND e.original_requested_delivery_date IS NOT NULL
+  AND e.revised_requested_delivery_date IS NOT NULL
+  AND e.revised_requested_delivery_date <> e.original_requested_delivery_date;

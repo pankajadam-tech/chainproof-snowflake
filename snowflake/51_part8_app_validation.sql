@@ -34,7 +34,8 @@ WITH expected(view_name, expected_rows) AS (
         ('V_GOVERN_PUBLISH_STATUS',4),
         ('V_GOVERNANCE_TIMELINE',3),
         ('V_CALCULATION_EVIDENCE',32),
-        ('V_PERSONA_CONTEXT',5)
+        ('V_PERSONA_CONTEXT',5),
+        ('V_DEFINITION_CHANGE_SIMULATOR',1)
 ), actual(view_name, actual_rows) AS (
     SELECT 'V_CONFLICT_SCANNER', COUNT(*) FROM V_CONFLICT_SCANNER
     UNION ALL SELECT 'V_METRIC_COMPONENT_COMPARISON', COUNT(*) FROM V_METRIC_COMPONENT_COMPARISON
@@ -43,6 +44,7 @@ WITH expected(view_name, expected_rows) AS (
     UNION ALL SELECT 'V_GOVERNANCE_TIMELINE', COUNT(*) FROM V_GOVERNANCE_TIMELINE
     UNION ALL SELECT 'V_CALCULATION_EVIDENCE', COUNT(*) FROM V_CALCULATION_EVIDENCE
     UNION ALL SELECT 'V_PERSONA_CONTEXT', COUNT(*) FROM V_PERSONA_CONTEXT
+    UNION ALL SELECT 'V_DEFINITION_CHANGE_SIMULATOR', COUNT(*) FROM V_DEFINITION_CHANGE_SIMULATOR
 )
 SELECT
     'ROW_COUNT_' || e.view_name AS check_name,
@@ -55,7 +57,7 @@ ORDER BY e.view_name;
 
 SELECT
     'TOTAL_APP_VIEW_ROWS' AS check_name,
-    '108' AS expected_value,
+    '109' AS expected_value,
     (
           (SELECT COUNT(*) FROM V_CONFLICT_SCANNER)
         + (SELECT COUNT(*) FROM V_METRIC_COMPONENT_COMPARISON)
@@ -64,6 +66,7 @@ SELECT
         + (SELECT COUNT(*) FROM V_GOVERNANCE_TIMELINE)
         + (SELECT COUNT(*) FROM V_CALCULATION_EVIDENCE)
         + (SELECT COUNT(*) FROM V_PERSONA_CONTEXT)
+        + (SELECT COUNT(*) FROM V_DEFINITION_CHANGE_SIMULATOR)
     )::VARCHAR AS actual_value,
     IFF(
           (SELECT COUNT(*) FROM V_CONFLICT_SCANNER)
@@ -72,7 +75,8 @@ SELECT
         + (SELECT COUNT(*) FROM V_GOVERN_PUBLISH_STATUS)
         + (SELECT COUNT(*) FROM V_GOVERNANCE_TIMELINE)
         + (SELECT COUNT(*) FROM V_CALCULATION_EVIDENCE)
-        + (SELECT COUNT(*) FROM V_PERSONA_CONTEXT) = 108,
+        + (SELECT COUNT(*) FROM V_PERSONA_CONTEXT)
+        + (SELECT COUNT(*) FROM V_DEFINITION_CHANGE_SIMULATOR) = 109,
         'PASS','FAIL'
     ) AS status;
 
@@ -103,7 +107,10 @@ SELECT
         "name"='CHAINPROOF_APP'
         AND "main_file"='streamlit_app.py'
         AND "query_warehouse"='GRIZZLY03_WH'
-        AND "runtime_name"='SYSTEM$WAREHOUSE_RUNTIME'
+        AND (
+              "runtime_name"='SYSTEM$WAREHOUSE_RUNTIME'
+           OR ("runtime_name" IS NULL AND "compute_pool" IS NULL)
+        )
         AND ("default_version" IS NOT NULL OR "live_version_location_uri" IS NOT NULL),
         'PASS','FAIL'
     ) AS status
@@ -219,6 +226,26 @@ SELECT
     ) AS status
 FROM V_IMPACT_SIMULATOR_BASE
 WHERE po_number='PO-5001';
+
+
+SELECT
+    'PO5006_DEFINITION_CHANGE_SIMULATOR' AS check_name,
+    'current v1.0=0; hypothetical revised-date=1; simulation only' AS expected_value,
+    'CURRENT=' || current_v1_rate::VARCHAR
+      || '; CANDIDATE=' || candidate_revised_date_rate::VARCHAR
+      || '; CHANGE=' || rate_change::VARCHAR
+      || '; ' || governance_status AS actual_value,
+    IFF(
+        po_number='PO-5006'
+        AND ABS(current_v1_rate-0.0)<0.000000001
+        AND ABS(candidate_revised_date_rate-1.0)<0.000000001
+        AND ABS(rate_change-1.0)<0.000000001
+        AND governance_status='SIMULATION_ONLY'
+        AND impact_status='RESULT_CHANGES',
+        'PASS','FAIL'
+    ) AS status
+FROM V_DEFINITION_CHANGE_SIMULATOR
+WHERE po_number='PO-5006';
 
 SELECT
     'PERSONA_POLICY' AS check_name,

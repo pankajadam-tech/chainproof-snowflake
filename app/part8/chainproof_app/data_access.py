@@ -95,3 +95,14 @@ def load_evidence(session: Any, po_number: str):
         """,
         [po_number],
     )
+
+
+def load_definition_change_simulator(session: Any):
+    return query_dataframe(
+        session,
+        """
+        SELECT *
+        FROM CHAINPROOF.APP.V_DEFINITION_CHANGE_SIMULATOR
+        ORDER BY ABS(RATE_CHANGE) DESC, PO_NUMBER
+        """,
+    )

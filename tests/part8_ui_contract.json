@@ -4,13 +4,13 @@
   "semantic_view": "CHAINPROOF.SEMANTIC.CHAINPROOF_SUPPLY_CHAIN_SV",
   "runtime_name": "SYSTEM$WAREHOUSE_RUNTIME",
   "screens": [
-    "Overview",
-    "Conflict Scanner",
+    "Start Here",
     "Why Numbers Differ",
-    "Impact Simulator",
-    "Govern & Publish",
+    "Govern the Definition",
+    "Trusted Enterprise Answer",
     "Ask ChainProof",
-    "Calculation Evidence"
+    "Evidence & Impact",
+    "Architecture & Trust"
   ],
   "app_views": {
     "V_CONFLICT_SCANNER": 8,
@@ -19,7 +19,8 @@
     "V_GOVERN_PUBLISH_STATUS": 4,
     "V_CALCULATION_EVIDENCE": 32,
     "V_PERSONA_CONTEXT": 5,
-    "V_GOVERNANCE_TIMELINE": 3
+    "V_GOVERNANCE_TIMELINE": 3,
+    "V_DEFINITION_CHANGE_SIMULATOR": 1
   },
   "po_5001": {
     "planning": 0.95,
@@ -32,6 +33,25 @@
     "enterprise_shortfall": 15,
     "logistics_late": 10
   },
+  "enterprise_aggregate": {
+    "numerator": 288,
+    "denominator": 555,
+    "rate": 0.5189189189189189
+  },
+  "question_scope": {
+    "default": "SELECTED_PURCHASE_ORDER",
+    "default_po": "PO-5001",
+    "po_5001_expected": 0.85,
+    "aggregate_expected": 0.5189189189189189,
+    "generated_sql_scope_guard": true,
+    "deterministic_semantic_fallback": true
+  },
+  "definition_change_simulator": {
+    "po_number": "PO-5006",
+    "current_v1_rate": 0.0,
+    "candidate_revised_date_rate": 1.0,
+    "governance_status": "SIMULATION_ONLY"
+  },
   "personas": [
     "DATA_STEWARD",
     "PLANNING",
@@ -39,7 +59,7 @@
     "LOGISTICS",
     "OPERATIONS_LEADER"
   ],
-  "certification_banner": "=== PART 8 STREAMLIT COMMIT-READY PASS ===",
+  "certification_banner": "=== PART 8R JUDGE-READY COMMIT PASS ===",
   "governance_journey": {
     "before_approval": {
       "ambiguous_query_behavior": "NO_CHOSEN_NUMBER",

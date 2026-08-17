@@ -1,4 +1,4 @@
-"""Stable application constants for ChainProof Part 8."""
+"""Stable application constants for ChainProof Part 8R."""
 
 APP_TITLE = "ChainProof"
 APP_OBJECT = "CHAINPROOF.APP.CHAINPROOF_APP"
@@ -6,13 +6,13 @@ SEMANTIC_VIEW = "CHAINPROOF.SEMANTIC.CHAINPROOF_SUPPLY_CHAIN_SV"
 ANALYST_ENDPOINT = "/api/v2/cortex/analyst/message"
 
 SCREENS = (
-    "Overview",
-    "Conflict Scanner",
+    "Start Here",
     "Why Numbers Differ",
-    "Impact Simulator",
-    "Govern & Publish",
+    "Govern the Definition",
+    "Trusted Enterprise Answer",
     "Ask ChainProof",
-    "Calculation Evidence",
+    "Evidence & Impact",
+    "Architecture & Trust",
 )
 
 PERSONA_LABELS = {
@@ -39,12 +39,13 @@ PERSONA_RELATED_METRIC = {
     "OPERATIONS_LEADER": "Enterprise Supplier Fill Rate",
 }
 
-PERSONA_DEFAULT_SCREEN = {
-    "DATA_STEWARD": "Conflict Scanner",
-    "PLANNING": "Overview",
-    "PROCUREMENT": "Overview",
-    "LOGISTICS": "Overview",
-    "OPERATIONS_LEADER": "Impact Simulator",
+PERSONA_DEFAULT_SCREEN = {persona: "Start Here" for persona in PERSONA_ORDER}
+
+SCOPE_SELECTED_PO = "SELECTED_PURCHASE_ORDER"
+SCOPE_ENTERPRISE_AGGREGATE = "ENTERPRISE_AGGREGATE"
+SCOPE_LABELS = {
+    SCOPE_SELECTED_PO: "Selected Purchase Order",
+    SCOPE_ENTERPRISE_AGGREGATE: "Enterprise aggregate",
 }
 
 METRIC_SPECS = {
@@ -53,6 +54,8 @@ METRIC_SPECS = {
         "numerator_column": "PROCUREMENT_CREDITED_QUANTITY",
         "denominator_column": "PROCUREMENT_DENOMINATOR_QUANTITY",
         "gap_column": "ENTERPRISE_SHORTFALL_QUANTITY",
+        "semantic_metric": "supplier_fill.enterprise_supplier_fill_rate",
+        "semantic_dimension": "supplier_fill.po_number",
         "impact_label": "accepted supplier quantity shortfall",
     },
     "Procurement Supplier Accepted Fill Rate": {
@@ -60,6 +63,8 @@ METRIC_SPECS = {
         "numerator_column": "PROCUREMENT_CREDITED_QUANTITY",
         "denominator_column": "PROCUREMENT_DENOMINATOR_QUANTITY",
         "gap_column": "PROCUREMENT_SHORTFALL_QUANTITY",
+        "semantic_metric": "supplier_fill.procurement_supplier_accepted_fill_rate",
+        "semantic_dimension": "supplier_fill.po_number",
         "impact_label": "accepted supplier quantity shortfall",
     },
     "Logistics On-Time Arrival Quantity Rate": {
@@ -67,6 +72,8 @@ METRIC_SPECS = {
         "numerator_column": "LOGISTICS_CREDITED_QUANTITY",
         "denominator_column": "LOGISTICS_DENOMINATOR_QUANTITY",
         "gap_column": "LOGISTICS_LATE_QUANTITY",
+        "semantic_metric": "logistics_arrival.logistics_on_time_arrival_quantity_rate",
+        "semantic_dimension": "logistics_arrival.po_number",
         "impact_label": "late physical quantity",
     },
     "Planning Material Availability Rate": {
@@ -74,10 +81,22 @@ METRIC_SPECS = {
         "numerator_column": "PLANNING_CREDITED_QUANTITY",
         "denominator_column": "PLANNING_DENOMINATOR_QUANTITY",
         "gap_column": "PLANNING_SHORTAGE_QUANTITY",
+        "semantic_metric": "planning_availability.planning_material_availability_rate",
+        "semantic_dimension": "planning_availability.production_plan_id",
         "impact_label": "production material shortage",
     },
 }
 
-AMBIGUOUS_INTERPRETATION = (
-    "Interpreted as Enterprise Supplier Fill Rate — Enterprise Approved — version 1.0."
+ENTERPRISE_METRIC_NAME = "Enterprise Supplier Fill Rate"
+ENTERPRISE_VERSION = "1.0"
+ENTERPRISE_CLASSIFICATION = "Enterprise — Approved"
+
+TRUST_LIFECYCLE = (
+    "Detect",
+    "Explain",
+    "Simulate",
+    "Approve",
+    "Publish",
+    "Ask",
+    "Prove",
 )
