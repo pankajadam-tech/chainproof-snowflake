@@ -20,6 +20,8 @@ from .app_logic import (
     metric_rate_for_po,
     rates_close,
 )
+from .data_access import search_trusted_evidence
+from .evidence_core import evidence_answer
 from .constants import (
     ENTERPRISE_CLASSIFICATION,
     ENTERPRISE_METRIC_NAME,
@@ -697,17 +699,27 @@ def render_analyst(
 
 
 def render_evidence_impact(
+    session: Any,
     evidence: pd.DataFrame,
     impact_base: pd.DataFrame,
     definition_changes: pd.DataFrame,
     selected_po: str,
+    review_packet: pd.DataFrame,
+    evidence_bindings: pd.DataFrame,
+    publication_gate: pd.DataFrame,
+    capabilities: pd.DataFrame,
 ) -> None:
     st.header("Evidence & Impact")
     st.caption(
-        f"The evidence and numerator/denominator quantities shown below are for the selected Purchase Order **{selected_po}**."
+        f"Calculation evidence, business impact, and trusted policy evidence for Purchase Order **{selected_po}**."
     )
-    evidence_tab, impact_tab, change_tab = st.tabs(
-        ["Calculation evidence", "Business impact", "Definition change simulator"]
+    evidence_tab, impact_tab, change_tab, review_tab = st.tabs(
+        [
+            "Calculation evidence",
+            "Business impact",
+            "Definition change simulator",
+            "Evidence-backed review",
+        ]
     )
     with evidence_tab:
         if evidence.empty:
@@ -803,15 +815,129 @@ def render_evidence_impact(
                     "Changing the governing date could make a supplier that missed the original "
                     "commitment appear perfect. ChainProof exposes that blast radius before publication."
                 )
+    with review_tab:
+        st.subheader("Evidence-backed Data Steward review")
+        st.write(
+            "ChainProof combines the governed calculation with applicable supplier, carrier, quality, "
+            "and metric-governance evidence. The advisor can explain and recommend; it cannot approve, "
+            "activate, publish, or write a metric."
+        )
+        if review_packet.empty:
+            st.warning("No Part 9 review packet is available for this Purchase Order.")
+        else:
+            packet = review_packet.iloc[0]
+            columns = st.columns(4)
+            columns[0].metric("Enterprise result", format_rate(packet["ENTERPRISE_SUPPLIER_FILL_RATE"]))
+            columns[1].metric("Trusted documents", int(packet["EVIDENCE_DOCUMENT_COUNT"]))
+            columns[2].metric("Trusted passages", int(packet["EVIDENCE_CHUNK_COUNT"]))
+            columns[3].metric("Version", str(packet["RECOMMENDED_VERSION"]))
+            st.success(
+                f"Recommended governed contract: **{packet['RECOMMENDED_METRIC_NAME']} v{packet['RECOMMENDED_VERSION']}**. "
+                f"Current decision state: **{packet['HUMAN_DECISION_STATE']}**."
+            )
+            st.write(packet["RECOMMENDATION_RATIONALE"])
+            st.caption(
+                f"Evidence workflow: {packet['EVIDENCE_WORKFLOW_MODE']} · "
+                "Advisor approval: disabled · Governance writes: disabled"
+            )
+
+        if not evidence_bindings.empty:
+            docs = evidence_bindings.copy()
+            st.markdown("#### Applicable evidence register")
+            st.dataframe(
+                docs[
+                    [
+                        "DOCUMENT_CITATION",
+                        "DOCUMENT_TITLE",
+                        "DOCUMENT_TYPE",
+                        "APPLICABILITY_REASON",
+                        "CONTENT_SHA256",
+                    ]
+                ],
+                use_container_width=True,
+                hide_index=True,
+            )
+
+        default_question = "Why does the enterprise metric use accepted quantity and the original PO requested date?"
+        evidence_question = st.text_input(
+            "Ask for evidence",
+            value=default_question,
+            key=f"part9_evidence_question_{selected_po}",
+        )
+        if st.button("Retrieve trusted evidence", key=f"part9_search_{selected_po}"):
+            try:
+                results, retrieval_mode = search_trusted_evidence(
+                    session,
+                    evidence_question,
+                    selected_po,
+                    evidence_bindings,
+                    capabilities,
+                    limit=5,
+                )
+                st.session_state[f"part9_results_{selected_po}"] = results.to_dict("records")
+                st.session_state[f"part9_mode_{selected_po}"] = retrieval_mode
+            except Exception as exc:
+                st.error(f"Trusted evidence retrieval failed: {exc}")
+
+        stored_results = st.session_state.get(f"part9_results_{selected_po}", [])
+        retrieval_mode = st.session_state.get(f"part9_mode_{selected_po}")
+        if stored_results:
+            answer = evidence_answer(stored_results, evidence_question)
+            st.info(answer["summary"])
+            st.caption(f"Retrieval mode: {retrieval_mode}")
+            for result in stored_results:
+                label = result.get("CITATION_LABEL") or result.get("citation_label")
+                title = result.get("DOCUMENT_TITLE") or result.get("document_title")
+                section = result.get("SECTION_TITLE") or result.get("section_title")
+                text = result.get("CHUNK_TEXT") or result.get("chunk_text")
+                with st.expander(f"{label} · {title} — {section}"):
+                    st.write(text)
+            st.markdown("**Citations:** " + " ".join(answer["citations"]))
+
+        st.markdown("#### Publication gate")
+        if publication_gate.empty:
+            st.warning("Publication-gate evidence is unavailable.")
+        else:
+            gate = publication_gate.copy()
+            st.dataframe(
+                gate[["CHECK_NAME", "EXPECTED_VALUE", "ACTUAL_VALUE", "STATUS"]],
+                use_container_width=True,
+                hide_index=True,
+            )
+            failures = int((gate["STATUS"] != "PASS").sum())
+            if failures:
+                st.error(f"Publication gate has {failures} failed check(s).")
+            else:
+                st.success("All deterministic publication checks passed.")
+
+        st.markdown("#### Capability and safety status")
+        if not capabilities.empty:
+            st.dataframe(
+                capabilities[
+                    [
+                        "CAPABILITY_NAME",
+                        "STATUS",
+                        "OVERALL_EVIDENCE_MODE",
+                        "USABLE_IN_CURRENT_ACCOUNT",
+                        "DETAIL",
+                    ]
+                ],
+                use_container_width=True,
+                hide_index=True,
+            )
+        st.warning(
+            "The untrusted instruction fixture is deliberately excluded from the trusted search source. "
+            "Retrieved text can never override version 1.0 or authorize a governance write."
+        )
 
 
-def render_architecture_trust(status: pd.DataFrame) -> None:
+def render_architecture_trust(status: pd.DataFrame, capabilities: pd.DataFrame | None = None) -> None:
     st.header("Architecture & Trust")
     st.code(
         "Source systems -> RAW -> CORE -> GOVERNANCE -> SEMANTIC -> APP\n"
         "                                      |            |\n"
         "                               metric versions   Cortex Analyst\n"
-        "                               approvals/events  Streamlit",
+        "                               approvals/events  Streamlit + trusted evidence",
         language="text",
     )
     st.subheader("Trust lifecycle")
@@ -826,8 +952,11 @@ def render_architecture_trust(status: pd.DataFrame) -> None:
     columns[3].metric("UI write mode", "Read-only")
     st.markdown(
         "**Snowflake-native stack:** RAW ingestion, typed CORE entities, versioned GOVERNANCE, "
-        "native Semantic View, verified questions, Cortex Analyst, and Streamlit in Snowflake."
+        "native Semantic View, verified questions, Cortex Analyst, trusted evidence, optional Cortex Search/Agent, and Streamlit in Snowflake."
     )
+    if capabilities is not None and not capabilities.empty:
+        overall_mode = str(capabilities.iloc[0]["OVERALL_EVIDENCE_MODE"])
+        st.markdown(f"**Evidence mode:** `{overall_mode}`")
     st.markdown(
         "**Safety:** generated SQL must be one read-only Semantic View statement. Persona changes "
         "presentation only. Governance approval remains human-controlled."

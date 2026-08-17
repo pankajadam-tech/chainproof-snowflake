@@ -155,7 +155,8 @@ Expected: it does not claim any department metric is mathematically wrong.
 5) Verify the **Version and decision timeline** is visible.
    Expected: timeline is always visible (read-only), both before/after.
 6) With `View as = Data Steward`:
-   Expected: **Data Steward decision replay** controls are visible.
+   Expected: **Data Steward decision replay** controls are visible, including the
+   `Preview controlled approval outcome` button.
 7) Click `Preview controlled approval outcome`.
    Expected: the preview shows 85% and clearly states it is session-only/read-only.
 8) Switch to `After enterprise approval`.
@@ -164,12 +165,31 @@ Expected: it does not claim any department metric is mathematically wrong.
 Visibility contract:
 
 - If `View as != Data Steward`, preview/approval controls must not appear.
+- Specifically, non-Data-Steward persona views must not show the
+  `Preview controlled approval outcome` button.
 - Timeline remains visible for all personas and both states.
+
+## Latest UI Consistency Fix
+
+Previously, the `Trusted Enterprise Answer` screen used fixed text inside the expander:
+
+- it said `85%` for `PO-5001`
+- it said `51.9%` for the aggregate
+
+That was inconsistent when the sidebar `Purchase Order` was changed to another PO such as `PO-5004`.
+
+Now the screen is dynamic:
+
+- the selected-PO enterprise rate follows the currently selected `Purchase Order`
+- the selected PO name in the explanation follows the currently selected `Purchase Order`
+- the enterprise aggregate remains the all-eligible-Purchase-Orders aggregate
+
+So for `PO-5004`, the selected-PO enterprise value shown in the explanation now follows `PO-5004`, while the aggregate remains the enterprise-wide aggregate.
 
 ### Screen 4: Trusted Enterprise Answer
 
 1) Select `Demo stage = Trusted Enterprise Answer`.
-2) Verify Metric Passport displays:
+2) Verify Metric Passport displays the currently selected Purchase Order scope and the enterprise rate for that selected PO.
 
 ```text
 Enterprise Supplier Fill Rate
@@ -182,8 +202,11 @@ Original PO requested date
 Published
 ```
 
-3) Expand `Why 51.9% can also be correct`.
-   Expected: it explains this is the ratio-of-sums across all eligible Purchase Orders.
+3) Expand the aggregate explanation expander.
+   Expected:
+   - the selected-PO number in the explanation matches the currently selected Purchase Order
+   - the selected Purchase Order name in the explanation matches the sidebar selection
+   - the aggregate number remains the ratio-of-sums across all eligible Purchase Orders
 
 ### Screen 5: Ask ChainProof — Selected PO scope
 
@@ -286,8 +309,8 @@ The KPI label “fill rate” appears in multiple forms because teams define it 
 
 The automated run produced the following evidence:
 
-- Executed at UTC: `2026-08-17T11:00:28Z`
-- Repository HEAD: `089e736acb6b1d0858a2f4820407fe5309cf5f20`
+- Executed at UTC: `2026-08-17T12:05:15Z`
+- Repository HEAD: `b01aee80347c56954b36ec1532efb81f53c65c3e`
 - Reviewed Part 8 baseline: `089e736acb6b1d0858a2f4820407fe5309cf5f20`
 - Operator: `swetabarman`
 - Snowflake CLI: `Snowflake CLI version: 3.24.1`
@@ -295,9 +318,9 @@ The automated run produced the following evidence:
 - Warehouse: `GRIZZLY03_WH`
 - Database / schema: `CHAINPROOF.APP`
 
-- Runtime log: `/Users/swetabarman/chainproof-runtime-logs/part8r_end_to_end_20260817T105049Z.log`
-- Runtime log SHA-256: `66737e6623e7731741d59915c3f946da918a3981871c1463bc25b71d97a693d5`
-- URL command output: `/Users/swetabarman/chainproof-runtime-logs/part8r_url_2026-08-17T110028Z.txt`
+- Runtime log: `/Users/swetabarman/chainproof-runtime-logs/part8r_end_to_end_20260817T115500Z.log`
+- Runtime log SHA-256: `b7770c7711422787692d8c36a79c39469b90b6d719591b513920282d73b616c5`
+- URL command output: `/Users/swetabarman/chainproof-runtime-logs/part8r_url_2026-08-17T120515Z.txt`
 
 Automated result summary:
 

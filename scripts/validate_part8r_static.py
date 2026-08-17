@@ -128,7 +128,8 @@ def check_app_source() -> None:
     for token in (
         "One KPI name. Three valid calculations. One governed answer.",
         "Metric Passport",
-        "Why 51.9% can also be correct",
+        "Why ",
+        " can also be correct",
         "Question scope",
         "ChainProof rejected an unscoped or mismatched Analyst query",
         "trusted_history_text",
