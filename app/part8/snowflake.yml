@@ -20,5 +20,6 @@ entities:
       - chainproof_app/analyst_core.py
       - chainproof_app/app_logic.py
       - chainproof_app/data_access.py
+      - chainproof_app/evidence_core.py
       - chainproof_app/analyst_client.py
       - chainproof_app/screens.py

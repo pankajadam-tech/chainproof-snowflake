@@ -20,7 +20,14 @@ from .app_logic import (
     metric_rate_for_po,
     rates_close,
 )
-from .data_access import search_trusted_evidence
+from .data_access import (
+    load_evidence_bindings,
+    load_part9_capabilities,
+    load_part9_review_packet,
+    load_publication_gate,
+    load_review_tab_data,
+    search_trusted_evidence,
+)
 from .evidence_core import evidence_answer
 from .constants import (
     ENTERPRISE_CLASSIFICATION,
@@ -349,17 +356,31 @@ def render_trusted_answer(
         f"Persona lens: {persona['selected_persona']}. The enterprise result remains {format_rate(rate)}; "
         "only the surrounding explanation changes."
     )
-    aggregate = aggregate_metric_rate(
-        impact_base.to_dict("records"), ENTERPRISE_METRIC_NAME
+    rows = impact_base.to_dict("records")
+    aggregate = aggregate_metric_rate(rows, ENTERPRISE_METRIC_NAME)
+    aggregate_numerator = sum(
+        float(r["PROCUREMENT_CREDITED_QUANTITY"])
+        for r in rows
+        if r.get("PROCUREMENT_CREDITED_QUANTITY") is not None
+        and r.get("PROCUREMENT_DENOMINATOR_QUANTITY") not in (None, 0)
     )
-    with st.expander("Why 51.9% can also be correct"):
+    aggregate_denominator = sum(
+        float(r["PROCUREMENT_DENOMINATOR_QUANTITY"])
+        for r in rows
+        if r.get("PROCUREMENT_CREDITED_QUANTITY") is not None
+        and r.get("PROCUREMENT_DENOMINATOR_QUANTITY") not in (None, 0)
+    )
+    with st.expander(f"Why {format_rate(aggregate)} can also be correct"):
         st.write(
-            "**85%** is the Enterprise Supplier Fill Rate for PO-5001. **51.9%** is the approved "
-            "ratio-of-sums aggregate across all eight eligible Purchase Orders. The formula is the "
-            "same; the question scope is different."
+            f"**{format_rate(rate)}** is the Enterprise Supplier Fill Rate for **{selected_po}**. "
+            f"**{format_rate(aggregate)}** is the approved ratio-of-sums aggregate across all eight "
+            "eligible Purchase Orders. The formula is the same; the question scope is different."
         )
         st.metric("Enterprise aggregate", format_rate(aggregate))
-        st.code("288 accepted on time / 555 ordered = 51.8919%", language="text")
+        st.code(
+            f"{aggregate_numerator:.0f} accepted on time / {aggregate_denominator:.0f} ordered = {format_rate(aggregate)}",
+            language="text",
+        )
 
 
 def _expected_rate(
@@ -704,15 +725,28 @@ def render_evidence_impact(
     impact_base: pd.DataFrame,
     definition_changes: pd.DataFrame,
     selected_po: str,
-    review_packet: pd.DataFrame,
-    evidence_bindings: pd.DataFrame,
-    publication_gate: pd.DataFrame,
-    capabilities: pd.DataFrame,
+    review_packet: pd.DataFrame | None,
+    evidence_bindings: pd.DataFrame | None,
+    publication_gate: pd.DataFrame | None,
+    capabilities: pd.DataFrame | None,
 ) -> None:
     st.header("Evidence & Impact")
     st.caption(
         f"Calculation evidence, business impact, and trusted policy evidence for Purchase Order **{selected_po}**."
     )
+    prev_po = st.session_state.get("part8_last_evidence_po")
+    if prev_po != selected_po:
+        st.session_state["part8_last_evidence_po"] = selected_po
+        st.session_state["part9_review_loaded_po"] = None
+        for old_key in [
+            f"part9_results_{prev_po}",
+            f"part9_mode_{prev_po}",
+            f"_cache_review_packet_{prev_po}",
+            f"_cache_evidence_bindings_{prev_po}",
+            f"_cache_trusted_chunks_{prev_po}",
+            f"_cache_review_tab_combined_{prev_po}",
+        ]:
+            st.session_state.pop(old_key, None)
     evidence_tab, impact_tab, change_tab, review_tab = st.tabs(
         [
             "Calculation evidence",
@@ -822,6 +856,26 @@ def render_evidence_impact(
             "and metric-governance evidence. The advisor can explain and recommend; it cannot approve, "
             "activate, publish, or write a metric."
         )
+        review_loaded = st.session_state.get("part9_review_loaded_po") == selected_po
+        if not review_loaded:
+            st.info(
+                f"Click below to load the evidence-backed review for **{selected_po}**. "
+                "This is deferred to keep the Evidence & Impact screen responsive."
+            )
+            if st.button("Load evidence-backed review", key=f"part9_load_review_{selected_po}"):
+                st.session_state["part9_review_loaded_po"] = selected_po
+                st.rerun()
+            return
+
+        with st.spinner(f"Loading evidence-backed review for {selected_po}..."):
+            # Single Snowflake round-trip for both review packet and evidence bindings.
+            # Publication gate and capabilities are already pre-loaded at app startup.
+            tab_data = load_review_tab_data(session, selected_po)
+            review_packet = tab_data["review_packet"]
+            evidence_bindings = tab_data["evidence_bindings"]
+            publication_gate = load_publication_gate(session)
+            capabilities = load_part9_capabilities(session)
+
         if review_packet.empty:
             st.warning("No Part 9 review packet is available for this Purchase Order.")
         else:

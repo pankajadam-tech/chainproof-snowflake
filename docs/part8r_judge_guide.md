@@ -276,6 +276,27 @@ SIMULATION_ONLY
 
 Expected: it clearly states the hypothetical result is not published.
 
+7) Open the `Evidence-backed review` tab.
+
+Expected: you will see a **"Load evidence-backed review"** button. This is intentional —
+the review data is loaded on demand to keep the Evidence & Impact screen responsive when first opened.
+
+8) Click **"Load evidence-backed review"**.
+
+Expected: a spinner appears for up to ~15–30 seconds (not minutes), then the review packet loads showing
+the Enterprise result for the **currently selected** PO (e.g., 85% for PO-5001).
+
+9) Change the Purchase Order in the sidebar (e.g., switch to PO-5004).
+
+Expected: the review tab resets and the **"Load evidence-backed review"** button reappears.
+This ensures stale data from the previous PO is never shown. Click the button again to load
+the review for the newly selected PO — the Enterprise result will reflect that PO's metric.
+
+10) Click **"Retrieve trusted evidence"** (inside the review tab, after loading).
+
+Expected: trusted evidence passages are retrieved deterministically from the applicable evidence register.
+This is the only action that triggers evidence retrieval; it does not happen automatically on page open.
+
 ### Screen 8: Architecture & Trust
 
 1) Select `Demo stage = Architecture & Trust`.

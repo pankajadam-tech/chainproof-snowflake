@@ -17,10 +17,15 @@ from chainproof_app.data_access import (
     load_context,
     load_definition_change_simulator,
     load_evidence,
+    load_evidence_bindings,
     load_governance_status,
     load_governance_timeline,
     load_impact_base,
     load_personas,
+    load_part9_capabilities,
+    load_part9_review_packet,
+    load_publication_gate,
+    load_review_tab_data,
 )
 from chainproof_app.screens import (
     render_analyst,
@@ -59,6 +64,9 @@ def main() -> None:
         governance_status = load_governance_status(session)
         governance_timeline = load_governance_timeline(session)
         definition_changes = load_definition_change_simulator(session)
+        # Pre-load global Part 9 data (13 rows total) while warehouse is warm.
+        load_publication_gate(session)
+        load_part9_capabilities(session)
     except Exception as exc:
         st.error(f"ChainProof could not initialize its governed Snowflake data: {exc}")
         st.stop()
@@ -168,13 +176,19 @@ def main() -> None:
         )
     elif screen == "Evidence & Impact":
         render_evidence_impact(
+            session,
             load_evidence(session, selected_po),
             impact_base,
             definition_changes,
             selected_po,
+            None,
+            None,
+            None,
+            None,
         )
     elif screen == "Architecture & Trust":
-        render_architecture_trust(governance_status)
+        part9_capabilities = load_part9_capabilities(session)
+        render_architecture_trust(governance_status, part9_capabilities)
 
 
 if __name__ == "__main__":

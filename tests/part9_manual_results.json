@@ -1,0 +1,52 @@
+{
+  "schema_version": 1,
+  "operator": "",
+  "executed_at_utc": "",
+  "application_url": "",
+  "overall_status": "PENDING",
+  "notes": "Complete only after the real deployed Streamlit browser smoke.",
+  "checks": [
+    {
+      "id": "APP_OPENS",
+      "status": "PENDING",
+      "observed": "",
+      "evidence": ""
+    },
+    {
+      "id": "PO5001_REVIEW_PACKET",
+      "status": "PENDING",
+      "observed": "",
+      "evidence": ""
+    },
+    {
+      "id": "TRUSTED_EVIDENCE_CITATIONS",
+      "status": "PENDING",
+      "observed": "",
+      "evidence": ""
+    },
+    {
+      "id": "PUBLICATION_GATE_ALL_PASS",
+      "status": "PENDING",
+      "observed": "",
+      "evidence": ""
+    },
+    {
+      "id": "UNTRUSTED_FIXTURE_EXCLUDED",
+      "status": "PENDING",
+      "observed": "",
+      "evidence": ""
+    },
+    {
+      "id": "CAPABILITY_MODE_TRUTHFUL",
+      "status": "PENDING",
+      "observed": "",
+      "evidence": ""
+    },
+    {
+      "id": "ADVISOR_CANNOT_APPROVE_OR_WRITE",
+      "status": "PENDING",
+      "observed": "",
+      "evidence": ""
+    }
+  ]
+}

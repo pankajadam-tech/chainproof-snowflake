@@ -1,0 +1,37 @@
+{
+  "documents": [
+    {
+      "document_id": "DOC-SUPPLIER-001",
+      "path": "data/evidence/batteryworks_supplier_agreement.md",
+      "sha256": "ba87ca19f92436496d2678088ee3dcc1b67708dcc56c08a133c2c9d4d943dadf",
+      "trusted": true
+    },
+    {
+      "document_id": "DOC-CARRIER-001",
+      "path": "data/evidence/inbound_carrier_sla.md",
+      "sha256": "4e97d06ce88c2a1b700209f3f016e0193ef53b2a6959b28465ed3a4bfd0a8b96",
+      "trusted": true
+    },
+    {
+      "document_id": "DOC-QUALITY-001",
+      "path": "data/evidence/pune_quality_acceptance_policy.md",
+      "sha256": "c9ea9ca70ccef4dac488ce74f5b0f2399023957c736ce8ee0d3b2c4503321fd4",
+      "trusted": true
+    },
+    {
+      "document_id": "DOC-GOVERNANCE-001",
+      "path": "data/evidence/enterprise_metric_governance_policy.md",
+      "sha256": "4e96adb39be7160c793a3292e0c0e8950e06bbedeba0f1534f0c8cc476d680ef",
+      "trusted": true
+    },
+    {
+      "document_id": "DOC-UNTRUSTED-001",
+      "path": "data/evidence/untrusted_instruction_fixture.md",
+      "sha256": "ffa8e0cdd79a824c7423d24cb12db005753904796fbfccecd72ac1e38e072866",
+      "trusted": false
+    }
+  ],
+  "chunks": 13,
+  "trusted_chunks": 12,
+  "scope_mappings": 26
+}
