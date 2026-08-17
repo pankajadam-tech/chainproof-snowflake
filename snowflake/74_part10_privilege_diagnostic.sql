@@ -1,0 +1,26 @@
+-- Read-only Part 10 capability and visibility diagnostic.
+-- This file does not grant or change privileges.
+
+USE ROLE GRIZZLY03_LEARNER_RL;
+USE WAREHOUSE GRIZZLY03_WH;
+USE DATABASE CHAINPROOF;
+USE SCHEMA AUDIT;
+
+SELECT
+    CURRENT_USER() AS current_user,
+    CURRENT_ROLE() AS current_role,
+    CURRENT_WAREHOUSE() AS current_warehouse,
+    CURRENT_DATABASE() AS current_database,
+    CURRENT_SCHEMA() AS current_schema,
+    CURRENT_TIMESTAMP() AS checked_at;
+
+SELECT
+    schema_name,
+    IFF(schema_name IN ('RAW', 'CORE', 'GOVERNANCE', 'SEMANTIC', 'APP', 'AUDIT'), 'EXPECTED', 'OTHER') AS schema_class
+FROM CHAINPROOF.INFORMATION_SCHEMA.SCHEMATA
+WHERE schema_name IN ('RAW', 'CORE', 'GOVERNANCE', 'SEMANTIC', 'APP', 'AUDIT')
+ORDER BY schema_name;
+
+SHOW STREAMLITS LIKE 'CHAINPROOF_APP' IN SCHEMA CHAINPROOF.APP;
+SHOW TABLES LIKE 'PART10_%' IN SCHEMA CHAINPROOF.AUDIT;
+SHOW VIEWS LIKE 'V_PART10_%' IN SCHEMA CHAINPROOF.AUDIT;

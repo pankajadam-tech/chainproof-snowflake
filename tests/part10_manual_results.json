@@ -1,0 +1,33 @@
+{
+  "baseline_commit": "373fa4b7b27a80b86d8e7ad227c236ed9eb3396b",
+  "operator": "",
+  "executed_at_utc": "",
+  "application_url": "",
+  "overall_status": "PENDING",
+  "checks": [
+    {
+      "id": "DATA_STEWARD_CONTROL_VISIBLE",
+      "status": "PENDING",
+      "observed": "",
+      "evidence": ""
+    },
+    {
+      "id": "NON_STEWARD_CONTROL_HIDDEN",
+      "status": "PENDING",
+      "observed": "",
+      "evidence": ""
+    },
+    {
+      "id": "EVIDENCE_LAZY_LOADING",
+      "status": "PENDING",
+      "observed": "",
+      "evidence": ""
+    },
+    {
+      "id": "RESPONSIVE_CORE_PATH",
+      "status": "PENDING",
+      "observed": "",
+      "evidence": ""
+    }
+  ]
+}
