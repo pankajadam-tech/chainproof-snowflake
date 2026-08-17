@@ -1,0 +1,1 @@
+/Users/swetabarman/chainproof-snowflake/app/part8/chainproof_app/analyst_core.py

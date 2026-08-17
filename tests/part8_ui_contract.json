@@ -1,0 +1,61 @@
+{
+  "app_object": "CHAINPROOF.APP.CHAINPROOF_APP",
+  "stage_object": "CHAINPROOF.APP.PART8_STREAMLIT_STAGE",
+  "semantic_view": "CHAINPROOF.SEMANTIC.CHAINPROOF_SUPPLY_CHAIN_SV",
+  "runtime_name": "SYSTEM$WAREHOUSE_RUNTIME",
+  "screens": [
+    "Overview",
+    "Conflict Scanner",
+    "Why Numbers Differ",
+    "Impact Simulator",
+    "Govern & Publish",
+    "Ask ChainProof",
+    "Calculation Evidence"
+  ],
+  "app_views": {
+    "V_CONFLICT_SCANNER": 8,
+    "V_METRIC_COMPONENT_COMPARISON": 48,
+    "V_IMPACT_SIMULATOR_BASE": 8,
+    "V_GOVERN_PUBLISH_STATUS": 4,
+    "V_CALCULATION_EVIDENCE": 32,
+    "V_PERSONA_CONTEXT": 5,
+    "V_GOVERNANCE_TIMELINE": 3
+  },
+  "po_5001": {
+    "planning": 0.95,
+    "procurement": 0.85,
+    "logistics": 0.9,
+    "enterprise": 0.85,
+    "spread": 0.1,
+    "planning_shortage": 5,
+    "procurement_shortfall": 15,
+    "enterprise_shortfall": 15,
+    "logistics_late": 10
+  },
+  "personas": [
+    "DATA_STEWARD",
+    "PLANNING",
+    "PROCUREMENT",
+    "LOGISTICS",
+    "OPERATIONS_LEADER"
+  ],
+  "certification_banner": "=== PART 8 STREAMLIT COMMIT-READY PASS ===",
+  "governance_journey": {
+    "before_approval": {
+      "ambiguous_query_behavior": "NO_CHOSEN_NUMBER",
+      "department_results": {
+        "Planning": 0.95,
+        "Procurement": 0.85,
+        "Logistics": 0.9
+      }
+    },
+    "after_approval": {
+      "metric": "Enterprise Supplier Fill Rate",
+      "version": "1.0",
+      "rate": 0.85,
+      "classification": "ENTERPRISE_APPROVED"
+    },
+    "timeline_rows": 3,
+    "write_mode": "READ_ONLY_REPLAY"
+  }
+}

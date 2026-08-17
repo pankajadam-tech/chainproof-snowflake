@@ -1,0 +1,9 @@
+name: chainproof-part8
+channels:
+  - snowflake
+dependencies:
+  # Streamlit in Snowflake provides the Python runtime; do not pin `python=` here.
+  # Only list Snowflake-supported packages.
+  - streamlit=1.50.0
+  - pandas=2.*
+  - snowflake-snowpark-python

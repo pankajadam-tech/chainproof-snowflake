@@ -1,0 +1,24 @@
+definition_version: 2
+entities:
+  chainproof_app:
+    type: streamlit
+    identifier:
+      name: CHAINPROOF_APP
+      database: CHAINPROOF
+      schema: APP
+    title: ChainProof
+    comment: Governed supply-chain metric reconciliation and conversational analytics
+    stage: CHAINPROOF.APP.PART8_STREAMLIT_STAGE
+    query_warehouse: GRIZZLY03_WH
+    runtime_name: SYSTEM$WAREHOUSE_RUNTIME
+    main_file: streamlit_app.py
+    artifacts:
+      - streamlit_app.py
+      - environment.yml
+      - chainproof_app/__init__.py
+      - chainproof_app/constants.py
+      - chainproof_app/analyst_core.py
+      - chainproof_app/app_logic.py
+      - chainproof_app/data_access.py
+      - chainproof_app/analyst_client.py
+      - chainproof_app/screens.py
