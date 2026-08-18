@@ -264,24 +264,27 @@ Quick-actions expectations:
 2) Verify the caption explicitly states evidence is for the selected PO (`PO-5001`).
 3) In `Calculation evidence`, verify four evidence rows exist for PO-5001.
 4) Verify Enterprise evidence uses 85 / 100 and the original PO requested date.
-5) Open `Definition change simulator`.
-6) Verify PO-5006 shows:
+5) Open `Business impact`.
+6) Select `Enterprise Supplier Fill Rate` and keep `Pass threshold = 90%`.
+7) Verify PO-5001 shows:
 
 ```text
-Approved v1.0: 0%
-Hypothetical revised-date rule: 100%
-Definition impact: 100 percentage points
-SIMULATION_ONLY
+Governed rate:       85%
+Assessment:          Fail
+Quantity at risk:    15
+Supplier shortfall:  15 units
+Late physical units: 10 units
+Production shortage: 5 units
 ```
 
-Expected: it clearly states the hypothetical result is not published.
+Expected: the page explains that Procurement, Logistics, and Planning own different responsibilities and therefore expose different operational quantities.
 
-7) Open the `Evidence-backed review` tab.
+8) Open the `Evidence-backed review` tab.
 
 Expected: you will see a **"Load evidence-backed review"** button. This is intentional —
 the review data is loaded on demand to keep the Evidence & Impact screen responsive when first opened.
 
-8) Click **"Load evidence-backed review"**.
+9) Click **"Load evidence-backed review"**.
 
 Expected: a spinner appears for up to ~15–30 seconds (not minutes), then the review packet loads showing
 the Enterprise result for the **currently selected** PO (e.g., 85% for PO-5001).
@@ -350,6 +353,6 @@ Automated result summary:
 - PO-5001 enterprise result passed at 0.85.
 - Enterprise aggregate passed at 288 / 555 = 0.5189189189.
 - The PO and aggregate scopes were proven distinct.
-- PO-5006 definition simulation passed at 0.0 versus 1.0 and remained `SIMULATION_ONLY`.
+- PO-5001 business impact passed with 15 supplier-shortfall units, 10 late units, and 5 production-shortage units.
 
 Manual browser smoke is still required. Record the human-run timestamp, screenshots, and observed outputs in this same document.

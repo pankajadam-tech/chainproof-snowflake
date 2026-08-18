@@ -1,0 +1,14 @@
+{
+  "project_title": "ChainProof",
+  "tagline": "One KPI name. Three valid calculations. One governed enterprise answer.",
+  "github_url": "https://github.com/pankajadam-tech/chainproof-snowflake",
+  "app_url": "REPLACE_WITH_APP_URL",
+  "video_url": "REPLACE_WITH_VIDEO_URL",
+  "team_name": "ChainProof",
+  "screenshots": {
+    "conflict": "../../docs/assets/screenshots/01_conflict_scanner.png",
+    "trusted": "../../docs/assets/screenshots/04_trusted_enterprise_v1.png",
+    "ask": "../../docs/assets/screenshots/05_ask_chainproof_85.png",
+    "evidence": "../../docs/assets/screenshots/07_evidence_backed_review.png"
+  }
+}

@@ -117,17 +117,21 @@ What is Enterprise Supplier Fill Rate?
 1. Open `Evidence & Impact`.
 2. In `Calculation evidence`, verify four evidence rows exist for PO-5001.
 3. Verify Enterprise evidence uses 85 / 100 and the original PO requested date.
-4. Open `Definition change simulator`.
-5. Verify PO-5006 shows:
+4. Open `Business impact`.
+5. Select `Enterprise Supplier Fill Rate` and keep `Pass threshold = 90%`.
+6. Verify the selected Purchase Order summary shows:
 
 ```text
-Approved v1.0: 0%
-Hypothetical revised-date rule: 100%
-Definition impact: 100 percentage points
-SIMULATION_ONLY
+Governed rate:       85%
+Assessment:          Fail
+Quantity at risk:    15
+Supplier shortfall:  15 units
+Late physical units: 10 units
+Production shortage: 5 units
 ```
 
-6. Verify the page says the hypothetical result is not published.
+7. Verify the page explains that the three quantities differ because Procurement, Logistics, and Planning own different responsibilities.
+8. Verify opening the page does not issue an extra Snowflake query; the impact is calculated from the already-loaded APP impact rows.
 
 ## 8. Architecture & Trust
 
@@ -146,7 +150,7 @@ Executed by: <actual user>
 Executed at UTC: <actual timestamp>
 Selected PO question: 85%
 Enterprise aggregate question: 51.9%
-PO-5006 simulation: 0% -> 100%
+PO-5001 business impact: 15 supplier-shortfall units, 10 late units, 5 production-shortage units
 Application URL: <actual URL>
 Screenshots: <actual location>
 ```

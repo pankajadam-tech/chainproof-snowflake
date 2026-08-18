@@ -19,6 +19,7 @@ from .app_logic import (
     format_rate,
     metric_rate_for_po,
     rates_close,
+    summarize_selected_impact,
 )
 from .data_access import (
     load_evidence_bindings,
@@ -723,7 +724,6 @@ def render_evidence_impact(
     session: Any,
     evidence: pd.DataFrame,
     impact_base: pd.DataFrame,
-    definition_changes: pd.DataFrame,
     selected_po: str,
     review_packet: pd.DataFrame | None,
     evidence_bindings: pd.DataFrame | None,
@@ -747,11 +747,10 @@ def render_evidence_impact(
             f"_cache_review_tab_combined_{prev_po}",
         ]:
             st.session_state.pop(old_key, None)
-    evidence_tab, impact_tab, change_tab, review_tab = st.tabs(
+    evidence_tab, impact_tab, review_tab = st.tabs(
         [
             "Calculation evidence",
             "Business impact",
-            "Definition change simulator",
             "Evidence-backed review",
         ]
     )
@@ -785,69 +784,83 @@ def render_evidence_impact(
                     st.write(f"**Damage treatment:** {row['DAMAGE_TREATMENT']}")
                     st.write(f"**Exclusions:** {row['EXCLUSIONS']}")
     with impact_tab:
+        st.subheader(f"Operational impact for {selected_po}")
+        st.write(
+            "Choose the metric and service threshold. ChainProof translates the governed rate into "
+            "the quantity at risk and the business action it supports."
+        )
         metric_name = st.selectbox(
             "Metric used for the assessment", list(METRIC_SPECS), key="part8r_impact_metric"
         )
         threshold_pct = st.slider(
             "Pass threshold", min_value=0, max_value=100, value=90, step=5
         )
-        result = calculate_impact(
-            impact_base.to_dict("records"), metric_name, threshold_pct / 100
+        st.caption(
+            "The threshold is a decision-support target for this view. It does not change the approved metric formula or version."
         )
-        columns = st.columns(3)
-        columns[0].metric("Pass scopes", result["pass_count"])
-        columns[1].metric("Fail scopes", result["fail_count"])
-        columns[2].metric(
-            result["impact_label"].title(), f"{result['total_gap_quantity']:.0f}"
+        summary = summarize_selected_impact(
+            impact_base.to_dict("records"), metric_name, threshold_pct / 100, selected_po
         )
-        output = pd.DataFrame(result["rows"])
-        output["SELECTED_RATE"] = output["SELECTED_RATE"].map(format_rate)
-        st.dataframe(
-            output[
-                [
-                    "PO_NUMBER",
-                    "SUPPLIER_NAME",
-                    "SELECTED_RATE",
-                    "ASSESSMENT",
-                    "SELECTED_NUMERATOR",
-                    "SELECTED_DENOMINATOR",
-                    "SELECTED_GAP_QUANTITY",
-                ]
-            ],
-            use_container_width=True,
-            hide_index=True,
-        )
-    with change_tab:
-        st.subheader("What if the company used revised dates?")
-        st.write(
-            "This simulation compares the active version 1.0 rule with a hypothetical revised-date "
-            "candidate. It never changes the approved metric."
-        )
-        if definition_changes.empty:
-            st.info("No eligible Purchase Order has a materially different revised-date scenario.")
+        if summary is None:
+            st.warning("No impact row is available for the selected Purchase Order.")
         else:
-            display = definition_changes.copy()
-            display["CURRENT_V1_RATE"] = display["CURRENT_V1_RATE"].map(format_rate)
-            display["CANDIDATE_REVISED_DATE_RATE"] = display[
-                "CANDIDATE_REVISED_DATE_RATE"
-            ].map(format_rate)
-            display["RATE_CHANGE"] = display["RATE_CHANGE"].map(format_rate)
-            st.dataframe(display, use_container_width=True, hide_index=True)
-            po5006 = definition_changes[
-                definition_changes["PO_NUMBER"].astype(str) == "PO-5006"
-            ]
-            if not po5006.empty:
-                row = po5006.iloc[0]
-                columns = st.columns(3)
-                columns[0].metric("Approved v1.0", format_rate(row["CURRENT_V1_RATE"]))
-                columns[1].metric(
-                    "Hypothetical revised-date rule",
-                    format_rate(row["CANDIDATE_REVISED_DATE_RATE"]),
+            columns = st.columns(4)
+            columns[0].metric("Governed rate", format_rate(summary["rate"]))
+            columns[1].metric("Pass threshold", f"{threshold_pct}%")
+            columns[2].metric("Assessment", str(summary["assessment"]).replace("_", " ").title())
+            columns[3].metric("Quantity at risk", f"{summary['gap_quantity']:.0f}")
+            numerator = summary.get("numerator")
+            denominator = summary.get("denominator")
+            if numerator is not None and denominator not in (None, 0):
+                st.code(
+                    f"{float(numerator):.0f} credited units / {float(denominator):.0f} denominator units "
+                    f"= {format_rate(summary['rate'])}",
+                    language="text",
                 )
-                columns[2].metric("Definition impact", format_rate(row["RATE_CHANGE"]))
-                st.error(
-                    "Changing the governing date could make a supplier that missed the original "
-                    "commitment appear perfect. ChainProof exposes that blast radius before publication."
+            message = f"**{summary['impact_title']}:** {summary['impact_statement']} {summary['business_action']}"
+            if summary["assessment"] == "FAIL":
+                st.error(message)
+            elif summary["assessment"] == "PASS":
+                st.success(message)
+            else:
+                st.info(message)
+
+            if selected_po == "PO-5001":
+                st.markdown("#### Cross-functional consequence for PO-5001")
+                consequence_cols = st.columns(3)
+                consequence_cols[0].metric("Supplier shortfall", "15 units")
+                consequence_cols[1].metric("Late physical quantity", "10 units")
+                consequence_cols[2].metric("Production shortage", "5 units")
+                st.caption(
+                    "These quantities are intentionally different because Procurement, Logistics, and "
+                    "Planning measure different responsibilities. ChainProof keeps the impacts separate "
+                    "instead of hiding them behind one KPI label."
+                )
+
+            with st.expander("Portfolio view across all eligible Purchase Orders"):
+                portfolio = summary["portfolio"]
+                portfolio_cols = st.columns(3)
+                portfolio_cols[0].metric("Pass scopes", portfolio["pass_count"])
+                portfolio_cols[1].metric("Fail scopes", portfolio["fail_count"])
+                portfolio_cols[2].metric(
+                    portfolio["impact_label"].title(), f"{portfolio['total_gap_quantity']:.0f}"
+                )
+                output = pd.DataFrame(portfolio["rows"])
+                output["SELECTED_RATE"] = output["SELECTED_RATE"].map(format_rate)
+                st.dataframe(
+                    output[
+                        [
+                            "PO_NUMBER",
+                            "SUPPLIER_NAME",
+                            "SELECTED_RATE",
+                            "ASSESSMENT",
+                            "SELECTED_NUMERATOR",
+                            "SELECTED_DENOMINATOR",
+                            "SELECTED_GAP_QUANTITY",
+                        ]
+                    ],
+                    use_container_width=True,
+                    hide_index=True,
                 )
     with review_tab:
         st.subheader("Evidence-backed Data Steward review")

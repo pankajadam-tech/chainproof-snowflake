@@ -96,7 +96,7 @@ ENTERPRISE_CLASSIFICATION = "Enterprise — Approved"
 TRUST_LIFECYCLE = (
     "Detect",
     "Explain",
-    "Simulate",
+    "Assess impact",
     "Ground",
     "Approve",
     "Publish",

@@ -2,162 +2,99 @@
 
 ## Product
 
-ChainProof is a Snowflake-native supply-chain metric reconciliation copilot.
+ChainProof is a Snowflake-native supply-chain metric trust and reconciliation platform.
 
-It detects when multiple teams use the same KPI name for different calculations, compares those definitions, explains why their values differ, and helps a Data Steward approve a governed enterprise definition.
+It detects when multiple teams use the same KPI label for different calculations, executes and compares those definitions, records a human Data Steward decision, versions the approved enterprise definition, publishes only the approved version, and provides governed conversational analytics with visible evidence.
 
-## Hackathon Track
+## Hackathon track
 
 Supply Chain Ontology and Governed Analytics
 
-## Primary User
+## Product principle
 
-Supply Chain Data Steward / Operations Analytics Lead
+> Role controls access. Persona controls presentation. The requested governed metric and explicit question scope control the calculation.
 
-## Secondary Users
-
-1. Planning Analyst  
-2. Procurement Analyst  
-3. Logistics Analyst  
-4. Operations Leader  
-
-## Metric Classification
-
-- Enterprise – Approved  
-- Department – Approved  
-- Candidate – Conflicting  
-- Deprecated – Ambiguous
-
-## Identity and Persona Policy
-Identity determines who is signed in.
-
-Snowflake roles determine what the user may access or change.
-
-ChainProof persona determines the default view, explanation emphasis, related departmental metrics, and follow-up suggestions.
-
-The metric requested by the user determines the calculation.
-
-Persona must never silently change a governed metric formula.
-
-## Example Query Behaviour
-A Logistics user asking "What is fill rate?" receives:
-- Main answer: approved Enterprise Supplier Fill Rate
-- Related answer: Logistics On-Time Arrival Quantity Rate
-- Logistics context: shipments, carriers, delays, freight cost, and SLA
-
-A logistics user explicitly asking for the logistics metric receives that logistics metric as the main answer.
-
-## Snowflake Architecture
-
-- `CHAINPROOF.RAW`
-- `CHAINPROOF.CORE`
-- `CHAINPROOF.GOVERNANCE`
-- `CHAINPROOF.SEMANTIC`
-- `CHAINPROOF.APP`
-- `CHAINPROOF.AUDIT`
-
-## Technology Direction
-
-- Snowflake CLI
-- Full CoCo CLI
-- Snowflake-native data and computation
-- Snowflake Semantic Views
-- Cortex Analyst
-- Verified queries and evaluations
-- Streamlit in Snowflake
-- Cortex Search
-- Cortex Agents
-- GitHub
-
-## Completed
-
-### Part 1
-
-- Snowflake hackathon account verified
-- CHAINPROOF database created
-- Six project schemas created
-- Learner role granted project access
-- Cortex Analyst, Search, Agents, and Evaluate visible
-
-## Current Status
-
-Part 3 complete. Business design documentation approved. Ready for Part 4.
-
-## Remaining Parts
-4. Source-system data  
-5. Canonical entity layer  
-6. Metric reconciliation engine  
-7. Semantic analytics  
-8. Streamlit application  
-9. Evidence and agent workflow  
-10. Security, evaluation, deployment, and finale  
-
-## Part 2 Completion
-
-The Mac development toolchain is connected and verified.
-
-### Local Development
-
-- Operating system: macOS
-- Git repository cloned locally
-- GitHub push verified
-- Snowflake CLI installed
-- CoCo CLI installed
-- CoCo working directory restricted to the project repository
-- CoCo operating in plan mode
-
-### Snowflake Development Context
-
-- User: GRIZZLY03
-- Role: GRIZZLY03_LEARNER_RL
-- Warehouse: GRIZZLY03_WH
-- Database: CHAINPROOF
-- Schema: RAW
-
-### Safety Policy
-
-- GRIZZLY03_CREATE_DB_RL is not used for normal development.
-- CoCo starts in plan mode.
-- Bypass mode is prohibited.
-- Credentials and Snowflake connection files remain outside Git.
-- The X-Small project warehouse is used.
-- Snowflake changes require explicit review.
-
-## Part 2 Evidence
-
-- Snowflake CLI connection test succeeded.
-- Local SQL file executed successfully.
-- CoCo verified the current Snowflake context.
-- CoCo inspected the local Git repository.
-- docs/part2_toolchain.md was created through an approved plan.
-
-## Part 3 Completion
-
-Business design documentation approved August 15, 2026.
-
-### Approved Enterprise Metric
+## Approved enterprise metric
 
 - Name: Enterprise Supplier Fill Rate
 - Version: 1.0
-- Classification: Enterprise — Approved
+- Classification: Enterprise - Approved
 - Grain: Purchase Order Line
-- Numerator: Accepted quantity whose physical receipt date is on or before the original PO requested date, capped at ordered quantity
-- Denominator: Ordered quantity
-- Governing date: Original PO requested delivery date
+- Numerator: accepted quantity physically received on or before the original PO requested date, capped at ordered quantity
+- Denominator: ordered quantity
+- Governing date: original PO requested delivery date
+- Aggregation: ratio of summed credited quantity to summed denominator quantity
 - Approver: pankajadam-tech, acting as Supply Chain Data Steward
-- Effective date: August 15, 2026
-- Approved Part 3 documentation commit: 81511c0b8906ebd8e41fa6a2137bfc90d0c986bf
+- Example: PO-5001 = 85 / 100 = 85%
 
-### Part 3 Documentation
+## Current implementation state
 
-- docs/business_scenario.md
-- docs/users_and_personas.md
-- docs/source_systems.md
-- docs/ontology.md
-- docs/metric_contracts.md
-- docs/query_resolution_policy.md
-- docs/part3_acceptance_criteria.md
+| Part | Status | Primary output |
+|---:|---|---|
+| 1 | Complete | Snowflake account, warehouse, database, six schemas |
+| 2 | Complete | GitHub, Snowflake CLI, CoCo CLI, safety workflow |
+| 3 | Complete | business scenario, ontology, approved metric contracts |
+| 4 | Complete | deterministic source CSVs and RAW ingestion |
+| 5 | Complete | canonical CORE entities and data-quality disposition |
+| 6 | Complete | metric definitions, versions, conflict, approval, activation |
+| 7 | Complete | native Semantic View, verified questions, live Cortex Analyst |
+| 8 / 8R | Complete | judge-first Streamlit application and question-scope controls |
+| 9 | Complete | evidence-backed review and capability-adaptive retrieval |
+| 10 | Complete | security controls, audit release snapshot, deployment hardening |
+| 11 | Prepared | reviewer-first repository, architecture, deck, screenshots plan |
+| 12 | Prepared | video narration, live demo script, reset/recovery, judge Q&A |
 
-## Next Part
+## Snowflake architecture
 
-Part 4 – Generate synthetic source-system data consistent with the approved metric contracts.
+- `CHAINPROOF.RAW` - source-shaped records as delivered
+- `CHAINPROOF.CORE` - cleaned, typed, canonical entities
+- `CHAINPROOF.GOVERNANCE` - metric definitions, versions, conflict, approval, activation, persona mapping
+- `CHAINPROOF.SEMANTIC` - approved business views, native Semantic View, verified questions
+- `CHAINPROOF.APP` - Streamlit app, APP views, evidence and capability status
+- `CHAINPROOF.AUDIT` - release snapshots, controls, known limitations
+
+## Demonstrated results
+
+For PO-5001:
+
+- Planning Material Availability Rate: 95%
+- Procurement Supplier Accepted Fill Rate: 85%
+- Logistics On-Time Arrival Quantity Rate: 90%
+- Enterprise Supplier Fill Rate v1.0: 85%
+
+For PO-5001, the business-impact view translates the governed metrics into operational quantities:
+
+- supplier commitment shortfall: 15 acceptable units
+- late physical quantity: 10 units
+- production shortage: 5 usable batteries, representing up to 5 laptops at risk in the demo
+
+Original commitment dates remain the approved version 1.0 accountability dates. Revised dates are retained as context, not used to rewrite performance.
+
+## Account constraints
+
+The learner account supports the deployed product and live Cortex Analyst questions. Some production and evaluation capabilities require account-level privileges that were not available:
+
+- official Cortex Analyst batch evaluation tasks
+- dedicated production owner/viewer/Data Steward roles
+- persistent approval write-back from the demo UI
+- native Cortex Search or Agent in accounts where those object privileges are unavailable
+
+ChainProof records these limitations explicitly and uses deterministic, truthful fallbacks rather than fabricating success.
+
+## Submission work
+
+Part 11 and Part 12 add no new business logic. They package the completed system for asynchronous judging:
+
+- judge-first README and guide
+- technical appendix and validation summary
+- architecture diagrams
+- PowerPoint and PDF deck
+- screenshot capture plan
+- 60-second, 3-minute, and 5-minute scripts
+- live demo reset and recovery instructions
+- judge Q&A and competitive positioning
+- submission copy and final checklist
+
+## Final rule
+
+After Part 10, product code is frozen. Only submission blockers may change application or metric code.

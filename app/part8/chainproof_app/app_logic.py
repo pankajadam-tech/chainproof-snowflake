@@ -94,6 +94,84 @@ def calculate_impact(
     }
 
 
+
+def summarize_selected_impact(
+    rows: Iterable[dict[str, Any]],
+    metric_name: str,
+    threshold: float,
+    po_number: str,
+) -> dict[str, Any] | None:
+    """Return a plain-language business impact summary for one Purchase Order.
+
+    This is presentation logic only. It reuses the already-loaded APP impact rows and
+    does not issue another Snowflake query.
+    """
+    result = calculate_impact(rows, metric_name, threshold)
+    target = str(po_number).upper()
+    selected = next(
+        (row for row in result["rows"] if str(row.get("PO_NUMBER", "")).upper() == target),
+        None,
+    )
+    if selected is None:
+        return None
+
+    rate = selected.get("SELECTED_RATE")
+    numerator = selected.get("SELECTED_NUMERATOR")
+    denominator = selected.get("SELECTED_DENOMINATOR")
+    gap = float(selected.get("SELECTED_GAP_QUANTITY") or 0)
+    assessment = selected.get("ASSESSMENT")
+
+    if metric_name in {
+        "Enterprise Supplier Fill Rate",
+        "Procurement Supplier Accepted Fill Rate",
+    }:
+        impact_title = "Supplier commitment impact"
+        if gap > 0:
+            impact_statement = (
+                f"{gap:.0f} acceptable units were not received by the original PO requested date."
+            )
+            business_action = (
+                "This can trigger supplier scorecard follow-up, escalation, or recovery planning."
+            )
+        else:
+            impact_statement = "The full acceptable quantity was received by the original PO requested date."
+            business_action = "No supplier quantity shortfall is visible for this Purchase Order."
+    elif metric_name == "Logistics On-Time Arrival Quantity Rate":
+        impact_title = "Carrier delivery impact"
+        if gap > 0:
+            impact_statement = f"{gap:.0f} units arrived after the original carrier commitment."
+            business_action = "This supports carrier SLA review and late-delivery follow-up."
+        else:
+            impact_statement = "All shipped units arrived by their original carrier commitments."
+            business_action = "No late physical quantity is visible for this Purchase Order."
+    else:
+        impact_title = "Production impact"
+        if gap > 0:
+            impact_statement = (
+                f"{gap:.0f} usable units were unavailable by the production need date."
+            )
+            business_action = (
+                f"For the one-battery-per-laptop demo, up to {gap:.0f} planned laptops are at risk unless the shortage is covered."
+            )
+        else:
+            impact_statement = "The production requirement was fully covered by the need date."
+            business_action = "No material-driven production shortage is visible for this Purchase Order."
+
+    return {
+        "metric_name": metric_name,
+        "po_number": po_number,
+        "threshold": threshold,
+        "rate": rate,
+        "numerator": numerator,
+        "denominator": denominator,
+        "gap_quantity": gap,
+        "assessment": assessment,
+        "impact_title": impact_title,
+        "impact_statement": impact_statement,
+        "business_action": business_action,
+        "portfolio": result,
+    }
+
 def metric_rate_for_po(
     rows: Iterable[dict[str, Any]], metric_name: str, po_number: str
 ) -> float | None:

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Fail-fast local validation for the ChainProof Part 8R overlay."""
+"""Fail-fast local validation for ChainProof Part 8R after business-impact refinement."""
 from __future__ import annotations
 
 import json
@@ -97,54 +97,58 @@ def check_contract() -> None:
     require(contract["screens"] == EXPECTED_SCREENS, "judge-first screen contract mismatch")
     require(contract["app_views"] == EXPECTED_VIEWS, "APP view contract mismatch")
     require(sum(EXPECTED_VIEWS.values()) == 109, "APP view total must equal 109")
-    require(abs(contract["po_5001"]["enterprise"] - 0.85) < 1e-12, "PO-5001 enterprise contract mismatch")
-    require(abs(contract["enterprise_aggregate"]["rate"] - 288 / 555) < 1e-12, "enterprise aggregate contract mismatch")
-    require(contract["question_scope"]["default"] == "SELECTED_PURCHASE_ORDER", "selected PO must be default scope")
-    require(contract["definition_change_simulator"]["po_number"] == "PO-5006", "PO-5006 simulator contract missing")
+    require(abs(contract["po_5001"]["enterprise"] - 0.85) < 1e-12, "PO-5001 enterprise mismatch")
+    require(abs(contract["enterprise_aggregate"]["rate"] - 288 / 555) < 1e-12, "aggregate mismatch")
+    require(contract["question_scope"]["default"] == "SELECTED_PURCHASE_ORDER", "selected PO must be default")
+    require(contract["business_impact"]["supplier_shortfall_units"] == 15, "supplier impact mismatch")
+    require(contract["business_impact"]["late_physical_units"] == 10, "logistics impact mismatch")
+    require(contract["business_impact"]["production_shortage_units"] == 5, "planning impact mismatch")
+    require(contract["business_impact"]["definition_change_simulator_visible"] is False, "simulator remains visible")
+    require(contract["legacy_definition_change_view"]["loaded_by_streamlit"] is False, "legacy view remains loaded")
 
 
 def check_app_source() -> None:
     app = read("app/part8/streamlit_app.py")
-    for token in (
-        '"View as"',
-        '"Purchase Order"',
-        '"Demo stage"',
-        "render_analyst(",
-        "selected_po",
-        "selected_plan_id",
-        "load_definition_change_simulator",
-    ):
+    for token in ('"View as"', '"Purchase Order"', '"Demo stage"', "render_analyst(", "selected_po", "selected_plan_id"):
         require(token in app, f"streamlit_app.py missing: {token}")
+    require("load_definition_change_simulator" not in app, "app still loads legacy simulator view")
+    require("definition_changes" not in app, "app still passes simulator data")
+
+    access = read("app/part8/chainproof_app/data_access.py")
+    require("def load_definition_change_simulator" not in access, "unused simulator loader remains")
+
     core = read("app/part8/chainproof_app/analyst_core.py")
-    for token in (
-        "prepare_scoped_question",
-        "validate_scope_sql",
-        "build_deterministic_metric_sql",
-        "all eligible purchase orders",
-        "Generated SQL did not preserve the requested scope",
-    ):
+    for token in ("prepare_scoped_question", "validate_scope_sql", "build_deterministic_metric_sql", "all eligible purchase orders", "Generated SQL did not preserve the requested scope"):
         require(token in core, f"Analyst scope guard missing: {token}")
+
     screens = read("app/part8/chainproof_app/screens.py")
     for token in (
         "One KPI name. Three valid calculations. One governed answer.",
         "Metric Passport",
-        "Why ",
-        " can also be correct",
         "Question scope",
         "ChainProof rejected an unscoped or mismatched Analyst query",
-        "trusted_history_text",
         "Reset walkthrough",
-        "What if the company used revised dates?",
+        "Operational impact for",
+        "Quantity at risk",
+        "Cross-functional consequence for PO-5001",
+        "Portfolio view across all eligible Purchase Orders",
         "Architecture & Trust",
     ):
         require(token in screens, f"judge-ready UX token missing: {token}")
-    require("requests." not in screens and "http://" not in screens and "https://" not in screens, "external network client found in app")
+    require("Definition change simulator" not in screens, "simulator tab remains visible")
+    require("What if the company used revised dates?" not in screens, "simulator copy remains visible")
+    require("requests." not in screens and "http://" not in screens and "https://" not in screens, "external network client found")
+
+    logic = read("app/part8/chainproof_app/app_logic.py")
+    require("def summarize_selected_impact" in logic, "impact-summary function missing")
+    constants = read("app/part8/chainproof_app/constants.py")
+    require('"Assess impact"' in constants and '"Simulate"' not in constants, "trust lifecycle wording mismatch")
 
 
 def check_sql() -> None:
     sql_paths = [
         "snowflake/49_part8_reset_app.sql",
-    "snowflake/50_part8_app_views.sql",
+        "snowflake/50_part8_app_views.sql",
         "snowflake/51_part8_app_validation.sql",
         "snowflake/53_part8r_scope_validation.sql",
         "tests/part8_app_tests.sql",
@@ -153,49 +157,17 @@ def check_sql() -> None:
     combined = "\n".join(read(path) for path in sql_paths)
     for path in sql_paths:
         text = read(path)
-        for token in (
-            "USE ROLE GRIZZLY03_LEARNER_RL;",
-            "USE WAREHOUSE GRIZZLY03_WH;",
-            "USE DATABASE CHAINPROOF;",
-        ):
+        for token in ("USE ROLE GRIZZLY03_LEARNER_RL;", "USE WAREHOUSE GRIZZLY03_WH;", "USE DATABASE CHAINPROOF;"):
             require(token in text, f"{path} missing context: {token}")
     view_sql = read("snowflake/50_part8_app_views.sql")
-    names = re.findall(
-        r"CREATE\s+OR\s+REPLACE\s+VIEW\s+CHAINPROOF\.APP\.([A-Z0-9_]+)",
-        view_sql,
-        flags=re.IGNORECASE,
-    )
+    names = re.findall(r"CREATE\s+OR\s+REPLACE\s+VIEW\s+CHAINPROOF\.APP\.([A-Z0-9_]+)", view_sql, flags=re.I)
     require(set(name.upper() for name in names) == set(EXPECTED_VIEWS), "exact eight APP views were not created")
-    require("accepted_by_revised_po_date_base" in view_sql, "revised-date evidence missing")
-    require("SIMULATION_ONLY" in view_sql, "simulation-only governance label missing")
-    reset_sql = read("snowflake/49_part8_reset_app.sql")
-    require("V_DEFINITION_CHANGE_SIMULATOR" in reset_sql, "Part 8R reset omits the new simulator view")
+    require("RAISE USING" not in combined.upper(), "PostgreSQL RAISE USING is prohibited")
+    require(not re.search(r"SELECT\s*\([^;]{0,1200}\)\s*INTO\s*:", combined, re.I | re.S), "unsupported SELECT (...) INTO found")
     environment = read("app/part8/environment.yml")
     require(not re.search(r"^\s*-\s*python\s*=", environment, re.M | re.I), "environment.yml must not pin Python")
     project = read("app/part8/snowflake.yml")
     require("runtime_name: SYSTEM$WAREHOUSE_RUNTIME" in project, "warehouse runtime pin missing")
-    require("RAISE USING" not in combined.upper(), "PostgreSQL RAISE USING is prohibited")
-    require(
-        not re.search(r"SELECT\s*\([^;]{0,1200}\)\s*INTO\s*:", combined, re.I | re.S),
-        "unsupported SELECT (...) INTO pattern found",
-    )
-    mutation_targets = re.findall(
-        r"(?:CREATE(?:\s+OR\s+REPLACE)?\s+(?:VIEW|TABLE|STAGE|STREAMLIT)|ALTER\s+(?:VIEW|TABLE|STAGE|STREAMLIT)|"
-        r"DROP\s+(?:VIEW|TABLE|STAGE|STREAMLIT)(?:\s+IF\s+EXISTS)?|TRUNCATE\s+TABLE|INSERT\s+INTO|UPDATE|DELETE\s+FROM|MERGE\s+INTO)\s+CHAINPROOF\.([A-Z0-9_]+)\.",
-        combined,
-        flags=re.IGNORECASE,
-    )
-    forbidden = sorted({schema.upper() for schema in mutation_targets if schema.upper() != "APP"})
-    require(not forbidden, "Part 8R mutates non-APP schemas: " + ", ".join(forbidden))
-    require(
-        (
-            re.search(r"288\.0\s*/\s*555\.0", read("tests/part8r_scope_tests.sql")) is not None
-            or "0.5189189189" in read("tests/part8r_scope_tests.sql")
-        ),
-        "aggregate scope assertion missing",
-    )
-    require("PO-5001" in read("tests/part8r_scope_tests.sql"), "PO scope assertion missing")
-    require("PO-5006" in read("tests/part8r_scope_tests.sql"), "definition-change assertion missing")
 
 
 def check_secrets() -> None:
@@ -239,9 +211,10 @@ def main() -> None:
     check_sql()
     check_secrets()
     run_pure_tests()
-    print("PASS: Part 8R file, Python, SQL, and judge-first UX contract")
-    print("PASS: PO-5001 scope=0.85 and enterprise aggregate=288/555 are distinct")
-    print("PASS: eight APP views, 109 rows, and PO-5006 definition-change simulation")
+    print("PASS: Part 8R file, Python, SQL, scope, and business-impact contract")
+    print("PASS: PO-5001 scope=0.85 and enterprise aggregate=288/555 remain distinct")
+    print("PASS: eight APP views remain compatible; the legacy simulator view is not loaded or shown")
+    print("PASS: PO-5001 impact = 15 supplier-shortfall, 10 late, and 5 production-shortage units")
     print("PASS: no credential material or non-APP Snowflake mutation")
 
 

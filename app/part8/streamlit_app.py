@@ -15,7 +15,6 @@ from chainproof_app.data_access import (
     load_components,
     load_conflicts,
     load_context,
-    load_definition_change_simulator,
     load_evidence,
     load_evidence_bindings,
     load_governance_status,
@@ -63,7 +62,6 @@ def main() -> None:
         impact_base = load_impact_base(session)
         governance_status = load_governance_status(session)
         governance_timeline = load_governance_timeline(session)
-        definition_changes = load_definition_change_simulator(session)
         # Pre-load global Part 9 data (13 rows total) while warehouse is warm.
         load_publication_gate(session)
         load_part9_capabilities(session)
@@ -179,7 +177,6 @@ def main() -> None:
             session,
             load_evidence(session, selected_po),
             impact_base,
-            definition_changes,
             selected_po,
             None,
             None,

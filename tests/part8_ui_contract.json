@@ -46,11 +46,21 @@
     "generated_sql_scope_guard": true,
     "deterministic_semantic_fallback": true
   },
-  "definition_change_simulator": {
-    "po_number": "PO-5006",
-    "current_v1_rate": 0.0,
-    "candidate_revised_date_rate": 1.0,
-    "governance_status": "SIMULATION_ONLY"
+  "business_impact": {
+    "default_po": "PO-5001",
+    "default_metric": "Enterprise Supplier Fill Rate",
+    "default_threshold": 0.9,
+    "selected_po_rate": 0.85,
+    "assessment": "FAIL",
+    "supplier_shortfall_units": 15,
+    "late_physical_units": 10,
+    "production_shortage_units": 5,
+    "definition_change_simulator_visible": false
+  },
+  "legacy_definition_change_view": {
+    "backend_view_retained_for_compatibility": true,
+    "loaded_by_streamlit": false,
+    "visible_in_judge_path": false
   },
   "personas": [
     "DATA_STEWARD",
@@ -59,7 +69,7 @@
     "LOGISTICS",
     "OPERATIONS_LEADER"
   ],
-  "certification_banner": "=== PART 8R JUDGE-READY COMMIT PASS ===",
+  "certification_banner": "=== CHAINPROOF BUSINESS-IMPACT REFINEMENT PASS ===",
   "governance_journey": {
     "before_approval": {
       "ambiguous_query_behavior": "NO_CHOSEN_NUMBER",

@@ -13,7 +13,7 @@ Part 8R is complete only when the local, Snowflake, deployment, and browser gate
 - [x] **[STATIC]** Generated SQL must preserve the requested PO or plan scope.
 - [x] **[STATIC]** A deterministic Semantic View fallback exists for one approved named metric.
 - [x] **[STATIC]** The app distinguishes `PO-5001 = 0.85` from `enterprise aggregate = 288/555`.
-- [x] **[STATIC]** The PO-5006 revised-date scenario is labeled `SIMULATION_ONLY`.
+- [x] **[STATIC]** The visible judge path contains a selected-PO business-impact summary and no definition-change simulator.
 - [x] **[STATIC]** Part 8R mutates only `CHAINPROOF.APP` objects.
 - [x] **[STATIC]** No credential, PAT, password, or private key is included.
 
@@ -35,7 +35,7 @@ Part 8R is complete only when the local, Snowflake, deployment, and browser gate
 - [x] **[RUNTIME]** `PO-5001` returns Enterprise `0.85`.
 - [x] **[RUNTIME]** Enterprise aggregate returns `288 / 555 = 0.5189189189`.
 - [x] **[RUNTIME]** The PO and aggregate results are proven to be distinct scopes.
-- [x] **[RUNTIME]** PO-5006 simulation returns active v1.0 `0.0` and candidate revised-date `1.0`.
+- [x] **[RUNTIME]** The legacy one-row definition-change view remains compatible but is not loaded or displayed by Streamlit.
 - [x] **[RUNTIME]** All four active metrics are published and the enterprise version is `1.0`.
 - [x] **[RUNTIME]** The three-row governance journey contains conflict, approval, and activation.
 - [x] **[RUNTIME]** Five persona mappings exist and persona policy does not change a formula.
@@ -60,7 +60,7 @@ Part 8R is complete only when the local, Snowflake, deployment, and browser gate
 - [ ] **[MANUAL]** In enterprise-aggregate scope, the same metric returns approximately 51.9%.
 - [ ] **[MANUAL]** Asking `What is fill rate for PO-5001?` resolves to Enterprise Supplier Fill Rate v1.0 at 85%.
 - [ ] **[MANUAL]** The generated SQL shown for PO-5001 contains the PO filter or the app displays the scope-correct fallback notice.
-- [ ] **[MANUAL]** PO-5006 shows 0% active v1.0 versus 100% hypothetical revised-date candidate.
+- [ ] **[MANUAL]** PO-5001 business impact shows 15 supplier-shortfall units, 10 late units, and 5 production-shortage units.
 - [ ] **[MANUAL]** All seven stages render without an uncaught exception.
 
 ## Completion rule
