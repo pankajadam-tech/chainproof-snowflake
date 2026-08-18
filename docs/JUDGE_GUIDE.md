@@ -11,6 +11,7 @@ This is the single detailed walkthrough for reviewing ChainProof. It is written 
 - Presentation: [PPTX](../submission/ChainProof_Hackathon_Presentation.pptx) · [PDF](../submission/ChainProof_Hackathon_Presentation.pdf)
 - Architecture: [ARCHITECTURE.md](ARCHITECTURE.md)
 - Technical detail: [TECHNICAL_APPENDIX.md](TECHNICAL_APPENDIX.md)
+- FAQs: [FAQs](FAQ.md)
 - Validation: [VALIDATION_SUMMARY.md](VALIDATION_SUMMARY.md)
 
 ## The story in one sentence
