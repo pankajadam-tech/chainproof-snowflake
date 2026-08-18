@@ -1,8 +1,8 @@
 # ChainProof Submission Links
 
 - GitHub repository: https://github.com/pankajadam-tech/chainproof-snowflake
-- Live Streamlit application: REPLACE_WITH_APP_URL
-- 4-5 minute walkthrough video: REPLACE_WITH_VIDEO_URL
+- Live Streamlit application: https://app.snowflake.com/SFEDU05/nxb07453/#/streamlit-apps/CHAINPROOF.APP.CHAINPROOF_APP
+- 4-5 minute walkthrough video: https://drive.google.com/file/d/1sbCqeRjcNWpvU3oHDjV-CBssD_QQyQaK/view?usp=sharing
 - Presentation PDF: `submission/ChainProof_Hackathon_Presentation.pdf`
 - Judge Guide: `docs/JUDGE_GUIDE.md`
 - Submission commit: run `git rev-parse HEAD` after the package is committed; record that SHA in the portal or release notes.

@@ -25,12 +25,12 @@ ChainProof resolves that ambiguity and publishes:
 | Reviewer need | Open this |
 |---|---|
 | See the working product | [Live Streamlit application](https://app.snowflake.com/SFEDU05/nxb07453/#/streamlit-apps/CHAINPROOF.APP.CHAINPROOF_APP) |
-| Watch the complete story | [4-5 minute walkthrough](docs/assets/chainproof-snowflake.mov) |
+| Watch the complete story | [6 minute walkthrough](https://drive.google.com/file/d/1sbCqeRjcNWpvU3oHDjV-CBssD_QQyQaK/view?usp=sharing) |
 | Follow the exact click path | [Judge Guide](docs/JUDGE_GUIDE.md) |
 | Review the presentation | [PPTX](submission/ChainProof_Hackathon_Presentation.pptx) · [PDF](submission/ChainProof_Hackathon_Presentation.pdf) |
 | Understand the architecture | [Architecture](docs/ARCHITECTURE.md) |
 | Inspect technical depth | [Technical Appendix](docs/TECHNICAL_APPENDIX.md) |
-| FAQs | [Validation Summary](docs/FAQ.md) |
+| FAQs | [FAQs](docs/FAQ.md) |
 | Review validation and limits | [Validation Summary](docs/VALIDATION_SUMMARY.md) |
 
 ## What makes ChainProof different
@@ -179,7 +179,7 @@ See [Part-by-Part Index](docs/PART_BY_PART_INDEX.md).
 
 - Public repository: https://github.com/pankajadam-tech/chainproof-snowflake
 - Live application: `https://app.snowflake.com/SFEDU05/nxb07453/#/streamlit-apps/CHAINPROOF.APP.CHAINPROOF_APP`
-- Walkthrough video: [docs/assets/chainproof-snowflake.mov](docs/assets/chainproof-snowflake.mov)
+- Walkthrough video: [Watch on Google Drive](https://drive.google.com/file/d/1sbCqeRjcNWpvU3oHDjV-CBssD_QQyQaK/view?usp=sharing)
 
 ---
 

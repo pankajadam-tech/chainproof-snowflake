@@ -159,7 +159,7 @@ Show:
 
 ```text
 GitHub: github.com/pankajadam-tech/chainproof-snowflake
-Live app: REPLACE_WITH_APP_URL
+Live app: https://app.snowflake.com/SFEDU05/nxb07453/#/streamlit-apps/CHAINPROOF.APP.CHAINPROOF_APP
 ```
 
 ## Recording mistakes to avoid
@@ -179,5 +179,5 @@ Do not say:
 1. Upload the MP4 to a public or unlisted location accessible without requesting permission.
 2. Test the link in an incognito window.
 3. Add it to `submission/links.md`.
-4. Replace `REPLACE_WITH_VIDEO_URL` in `README.md`.
+4. Video link: https://drive.google.com/file/d/1sbCqeRjcNWpvU3oHDjV-CBssD_QQyQaK/view?usp=sharing
 5. Add the link to the last presentation slide and portal submission.

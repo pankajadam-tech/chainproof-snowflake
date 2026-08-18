@@ -7,7 +7,7 @@ This is the single detailed walkthrough for reviewing ChainProof. It is written 
 ## Quick links
 
 - Live application: [Open ChainProof](https://app.snowflake.com/SFEDU05/nxb07453/#/streamlit-apps/CHAINPROOF.APP.CHAINPROOF_APP)
-- 4-5 minute walkthrough: [Watch video](assets/chainproof-snowflake.mov)
+- 6 minute walkthrough: [Watch video](https://drive.google.com/file/d/1sbCqeRjcNWpvU3oHDjV-CBssD_QQyQaK/view?usp=sharing)
 - Presentation: [PPTX](../submission/ChainProof_Hackathon_Presentation.pptx) · [PDF](../submission/ChainProof_Hackathon_Presentation.pdf)
 - Architecture: [ARCHITECTURE.md](ARCHITECTURE.md)
 - Technical detail: [TECHNICAL_APPENDIX.md](TECHNICAL_APPENDIX.md)
@@ -24,7 +24,7 @@ The application runs in Streamlit in Snowflake. A Snowflake login may be require
 If the app cannot be opened from the judging environment:
 
 1. Watch the walkthrough video.
-2. Open the screenshots listed in `docs/assets/screenshots/`.
+2. All the screenshots attached here are listed in `docs/assets/screenshots/`as well.
 3. Review the presentation PDF.
 4. Use the repository and validation evidence for technical inspection.
 

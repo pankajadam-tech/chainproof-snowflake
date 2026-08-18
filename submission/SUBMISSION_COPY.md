@@ -69,5 +69,5 @@ Snowflake’s official Cortex Analyst batch evaluation runner requires account-l
 ## Links
 
 - GitHub: https://github.com/pankajadam-tech/chainproof-snowflake
-- Live app: REPLACE_WITH_APP_URL
-- Walkthrough video: REPLACE_WITH_VIDEO_URL
+- Live app: https://app.snowflake.com/SFEDU05/nxb07453/#/streamlit-apps/CHAINPROOF.APP.CHAINPROOF_APP
+- Walkthrough video: https://drive.google.com/file/d/1sbCqeRjcNWpvU3oHDjV-CBssD_QQyQaK/view?usp=sharing
