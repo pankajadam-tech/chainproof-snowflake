@@ -7,7 +7,7 @@ This is the single detailed walkthrough for reviewing ChainProof. It is written 
 ## Quick links
 
 - Live application: [Open ChainProof](https://app.snowflake.com/SFEDU05/nxb07453/#/streamlit-apps/CHAINPROOF.APP.CHAINPROOF_APP)
-- 6 minute walkthrough: [Watch video](https://drive.google.com/file/d/1sbCqeRjcNWpvU3oHDjV-CBssD_QQyQaK/view?usp=sharing)
+- 5 minute walkthrough: [Watch video](https://drive.google.com/file/d/1bckeXdcK-QDT_v3O_5NY-_Bc9MWbg9Db/view?usp=sharing)
 - Presentation: [PPTX](../submission/ChainProof_Hackathon_Presentation.pptx) · [PDF](../submission/ChainProof_Hackathon_Presentation.pdf)
 - Architecture: [ARCHITECTURE.md](ARCHITECTURE.md)
 - Technical detail: [TECHNICAL_APPENDIX.md](TECHNICAL_APPENDIX.md)
