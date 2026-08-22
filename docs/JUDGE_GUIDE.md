@@ -13,6 +13,7 @@ This is the single detailed walkthrough for reviewing ChainProof. It is written 
 - Technical detail: [TECHNICAL_APPENDIX.md](TECHNICAL_APPENDIX.md)
 - FAQs: [FAQs](FAQ.md)
 - Validation: [VALIDATION_SUMMARY.md](VALIDATION_SUMMARY.md)
+- CoCo CLI demo prompt: [DEMO_PROMPT.md](DEMO_PROMPT.md)
 
 ## The story in one sentence
 
