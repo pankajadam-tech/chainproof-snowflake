@@ -1,7 +1,5 @@
 # CoCo CLI Demo Prompt - Read-Only PO-5001 Workflow
 
-Use this exact prompt inside the `cortex` CLI during the submission video.
-
 ```text
 You are in the ChainProof repository. Perform one read-only end-to-end validation for purchase order PO-5001.
 
